@@ -77,5 +77,8 @@ renderEntry entry =
             word16BE $ fromIntegral $ entryFlags entry,
             stringUtf8 $ entryPath entry]) <> BStr.pack [0];
         bufLen = BStr.length buf;
-        pad = BStr.pack $ take (fromIntegral $ 8 - (bufLen `mod` 8)) $ repeat 0
+        padLen = 8 - (bufLen `mod` 8);
+        pad = BStr.pack $
+            take (fromIntegral $ if padLen == 8 then 0 else padLen) $
+            repeat 0
     in buf <> pad

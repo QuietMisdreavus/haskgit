@@ -1,5 +1,6 @@
 module Workspace (
     listWorkspaceFiles,
+    listFileInWorkspace,
     readWorkspaceFile,
     statWorkspaceFile,
     fullStatWorkspaceFile,
@@ -33,8 +34,7 @@ allFilters list = filterSwapFiles $ filterFilenames list
 
 -- returns the names of the files in the given workspace directory.
 listWorkspaceFiles :: String -> IO [String]
-listWorkspaceFiles path =
-    (fmap . fmap) (makeRelative path) (listWorkspaceFiles' path)
+listWorkspaceFiles path = listFileInWorkspace path "."
 
 listWorkspaceFiles' :: String -> IO [String]
 listWorkspaceFiles' path = do
@@ -48,6 +48,17 @@ listWorkspaceFiles' path = do
                 else pure [fpath]
         )
         filenames
+
+listFileInWorkspace :: String -> String -> IO [String]
+listFileInWorkspace ws file = do
+    let path = if file == "." then ws else ws </> file
+    isDir <- doesDirectoryExist path
+    if isDir
+        then do
+            files <- listWorkspaceFiles' path
+            concatMapM (listFileInWorkspace ws) files
+        else
+            pure [makeRelative ws file]
 
 -- from the given path, loads the given file.
 readWorkspaceFile :: String -> String -> IO ByteString

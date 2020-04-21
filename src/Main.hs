@@ -1,6 +1,7 @@
 module Main where
 
 import Control.Monad (foldM, filterM)
+import Control.Monad.Extra (concatMapM)
 import Data.Maybe
 import Data.Time.LocalTime (getZonedTime)
 import System.Directory
@@ -87,5 +88,5 @@ doAdd args = do
             writeObject dbPath obj
             pure $ addIndexEntry p (objectId obj) fileStat i)
         initIndex
-        =<< filterM doesFileExist args :: IO Index
+        =<< concatMapM (listFileInWorkspace rootPath) args :: IO Index
     writeIndex index
