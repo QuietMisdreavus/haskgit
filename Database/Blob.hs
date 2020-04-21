@@ -1,4 +1,4 @@
-module Blob where
+module Database.Blob where
 
 import Data.ByteString.Lazy
 

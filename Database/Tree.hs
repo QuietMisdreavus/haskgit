@@ -1,4 +1,4 @@
-module Tree where
+module Database.Tree where
 
 import Data.Digest.Pure.SHA (bytestringDigest)
 import Data.List (sortOn, foldl')

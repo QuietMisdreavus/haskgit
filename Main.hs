@@ -7,13 +7,13 @@ import System.Environment
 import System.Exit
 import System.FilePath
 
-import Author
-import Blob
-import Commit
 import Database
+import Database.Author
+import Database.Blob
+import Database.Commit
+import Database.Tree
 import Entry
 import Refs
-import Tree
 import Util
 import Workspace
 

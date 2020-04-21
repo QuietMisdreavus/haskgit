@@ -1,4 +1,4 @@
-module Author where
+module Database.Author where
 
 import Data.Time.Format
 import Data.Time.LocalTime (ZonedTime)

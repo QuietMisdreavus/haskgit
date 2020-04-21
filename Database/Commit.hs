@@ -1,4 +1,4 @@
-module Commit where
+module Database.Commit where
 
 import Prelude hiding (unlines)
 
@@ -6,8 +6,8 @@ import Data.ByteString.Lazy.Char8 (unlines)
 import Data.Digest.Pure.SHA (showDigest)
 import Data.String (fromString)
 
-import Author
 import Database (ObjectId)
+import Database.Author
 import Util
 
 data Commit = Commit {
