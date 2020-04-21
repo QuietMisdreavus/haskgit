@@ -9,7 +9,7 @@ import System.FilePath
 
 -- a list of filenames that should be excluded from `listWorkspaceFiles`.
 ignoreFilenames :: [String]
-ignoreFilenames = [".", "..", ".git"]
+ignoreFilenames = [".", "..", ".git", "tags"]
 
 -- filters the given filename list for files that should not be saved in git.
 filterFilenames :: [String] -> [String]
