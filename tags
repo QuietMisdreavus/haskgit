@@ -1,0 +1,47 @@
+Author	Author.hs	6;"	d
+Author	Author.hs	6;"	t
+Blob	Blob.hs	8;"	d
+Blob	Blob.hs	8;"	t
+Commit	Commit.hs	14;"	d
+Commit	Commit.hs	14;"	t
+DatabaseObject	Database.hs	17;"	d
+DatabaseObject	Database.hs	17;"	t
+Entry	Entry.hs	5;"	d
+Entry	Entry.hs	5;"	t
+GitObject	Util.hs	9;"	t
+ObjectId	Database.hs	15;"	t
+Tree	Tree.hs	12;"	d
+Tree	Tree.hs	12;"	t
+authorEmail	Author.hs	8;"	v
+authorName	Author.hs	7;"	v
+authorTimestamp	Author.hs	9;"	v
+commandError	/Users/misdreavus/git/building-git/uploaded-haskgit/src/Main.hs	33;"	v
+commitAuthor	Commit.hs	17;"	v
+commitMessage	Commit.hs	18;"	v
+commitParent	Commit.hs	16;"	v
+commitTree	Commit.hs	15;"	v
+dieOnPermError	Util.hs	16;"	v
+doCommit	/Users/misdreavus/git/building-git/uploaded-haskgit/src/Main.hs	48;"	v
+doInit	/Users/misdreavus/git/building-git/uploaded-haskgit/src/Main.hs	38;"	v
+entryMode	Tree.hs	10;"	v
+entryName	Entry.hs	6;"	v
+entryOid	Entry.hs	7;"	v
+filterFilenames	Workspace.hs	16;"	v	file:
+filterSwapFiles	Workspace.hs	20;"	v	file:
+gitData	Util.hs	10;"	v
+gitType	Util.hs	11;"	v
+headPath	Refs.hs	13;"	v	file:
+ignoreFilenames	Workspace.hs	12;"	v	file:
+listWorkspaceFiles	Workspace.hs	24;"	v
+main	/Users/misdreavus/git/building-git/uploaded-haskgit/src/Main.hs	24;"	v
+mkObject	Database.hs	30;"	v
+objectContent	Database.hs	18;"	v
+objectId	Database.hs	19;"	v
+objectIdBStr	Database.hs	26;"	v
+objectIdStr	Database.hs	23;"	v
+parseCommand	/Users/misdreavus/git/building-git/uploaded-haskgit/src/Main.hs	27;"	v
+readHead	Refs.hs	19;"	v
+readWorkspaceFile	Workspace.hs	31;"	v
+renderAuthor	Author.hs	13;"	v
+updateHead	Refs.hs	16;"	v
+writeObject	Database.hs	40;"	v

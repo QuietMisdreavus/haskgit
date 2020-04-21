@@ -8,13 +8,14 @@ import System.Directory
 import System.Environment
 import System.Exit
 import System.FilePath
-import System.IO (getContents, writeFile)
+import System.IO (getContents)
 
 import Author
 import Blob
 import Commit
 import Database
 import Entry
+import Refs
 import Tree
 import Util
 import Workspace
@@ -58,12 +59,14 @@ doCommit = do
         fileList
     let tree = mkObject $ Tree entries
     writeObject dbPath tree
+    parent <- readHead gitPath
     name <- fromMaybe "" <$> lookupEnv "GIT_AUTHOR_NAME"
     email <- fromMaybe "" <$> lookupEnv "GIT_AUTHOR_EMAIL"
     author <- (Author name email) <$> getZonedTime
     message <- getContents
-    let commit = mkObject $ Commit (objectId tree) author message
+    let commit = mkObject $ Commit (objectId tree) parent author message
     writeObject dbPath commit
-    writeFile (gitPath </> "HEAD") (objectIdStr commit)
-    putStrLn $ "[(root-commit) " ++ (objectIdStr commit) ++ "]"
+    updateHead gitPath $ objectId commit
+    let rootMsg = if (isNothing parent) then "(root-commit " else ""
+    putStrLn $ "[" ++ rootMsg ++ (objectIdStr commit) ++ "]"
     putStrLn $ head $ lines message
