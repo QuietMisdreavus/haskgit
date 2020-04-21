@@ -80,13 +80,14 @@ doAdd args = do
     let dbPath = gitPath </> "objects"
     let indexPath = gitPath </> "index"
     initIndex <- loadIndex =<< mkIndex indexPath
-    index <- foldM
-        (\i p -> do
+    (index, needsWrite) <- foldM
+        (\(i, wasUpdated) p -> do
             fileData <- readWorkspaceFile rootPath p
             fileStat <- fullStatWorkspaceFile rootPath p
             let obj = mkObject $ Blob fileData
             writeObject dbPath obj
-            pure $ addIndexEntry p (objectId obj) fileStat i)
-        initIndex
-        =<< concatMapM (listFileInWorkspace rootPath) args :: IO Index
-    writeIndex index
+            let (nextIndex, changed) = addIndexEntry p (objectId obj) fileStat i
+            return (nextIndex, wasUpdated || changed))
+        (initIndex, False)
+        =<< concatMapM (listFileInWorkspace rootPath) args
+    tryWriteIndex needsWrite index

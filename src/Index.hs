@@ -27,10 +27,13 @@ mkIndex pathname = do
         Left () -> IOErr.ioError $ IOErr.userError $ "Could not lock index at " ++ pathname
         Right l -> pure $ Index l Map.empty
 
-addIndexEntry :: String -> ObjectId -> FileStatus -> Index -> Index
+addIndexEntry :: String -> ObjectId -> FileStatus -> Index -> (Index, Bool)
 addIndexEntry path oid stat (Index l iMap) =
-    let entry = mkIndexEntry path oid stat
-    in Index l $ Map.insert path entry iMap
+    let entry = mkIndexEntry path oid stat;
+        updated = case (Map.lookup path iMap) of
+            Nothing -> True
+            Just prevEntry -> (entryId prevEntry) /= oid
+    in (Index l $ Map.insert path entry iMap, updated)
 
 loadIndex :: Index -> IO Index
 loadIndex (Index lock _) = do
@@ -101,3 +104,9 @@ writeIndex (Index lockfile iMap) = do
         iMap
     writeLockfileBStr lockfile $ bStrDigest $ finishHash finalHash
     commitLock lockfile
+
+tryWriteIndex :: Bool -> Index -> IO ()
+tryWriteIndex shouldWrite i =
+    if shouldWrite
+        then writeIndex i
+        else let (Index lockfile _) = i in rollbackLock lockfile

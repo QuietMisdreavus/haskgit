@@ -64,3 +64,12 @@ commitLock (Lockfile filename lockHandle) = do
             hClose lockHandle
             let lockName = lockFileName filename
             renameFile lockName filename
+
+rollbackLock :: Lockfile -> IO ()
+rollbackLock (Lockfile filename lockHandle) = do
+    holdingLock <- hIsOpen lockHandle
+    if not holdingLock
+        then ioError (userError $ "Not holding lock on file: " ++ (lockFileName filename))
+        else do
+            hClose lockHandle
+            removeFile $ lockFileName filename
