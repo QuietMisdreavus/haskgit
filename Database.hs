@@ -41,8 +41,10 @@ writeObject path obj = do
     let strId = objectIdStr obj
     let objPath = path </> (take 2 strId) </> (drop 2 strId)
     let objDir = takeDirectory objPath
-    createDirectoryIfMissing True objDir
-    (tempPath, tempFile) <- openTempFile objDir "tmp_obj_"
-    hPut tempFile $ compress $ objectContent obj
-    hClose tempFile
-    renameFile tempPath objPath
+    objectExists <- doesFileExist objPath
+    if objectExists then return () else do
+        createDirectoryIfMissing True objDir
+        (tempPath, tempFile) <- openTempFile objDir "tmp_obj_"
+        hPut tempFile $ compress $ objectContent obj
+        hClose tempFile
+        renameFile tempPath objPath
