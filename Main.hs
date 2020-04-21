@@ -53,16 +53,16 @@ doCommit = do
             fileStat <- statWorkspaceFile rootPath path
             let obj = mkObject $ Blob fileData
             writeObject dbPath obj
-            return $ Entry path (objectIdBStr obj) fileStat)
+            return $ Entry path (objectId obj) fileStat)
         fileList
-    let tree = mkObject $ Tree entries
-    writeObject dbPath tree
+    let tree = buildTree entries
+    (treeId, _) <- traverseTree (writeObject dbPath) tree
     parent <- readHead gitPath
     name <- fromMaybe "" <$> lookupEnv "GIT_AUTHOR_NAME"
     email <- fromMaybe "" <$> lookupEnv "GIT_AUTHOR_EMAIL"
     author <- (Author name email) <$> getZonedTime
     message <- getContents
-    let commit = mkObject $ Commit (objectId tree) parent author message
+    let commit = mkObject $ Commit treeId parent author message
     writeObject dbPath commit
     updateHead gitPath $ objectId commit
     let rootMsg = if (isNothing parent) then "(root-commit " else ""
