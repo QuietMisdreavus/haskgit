@@ -8,7 +8,6 @@ import Data.String (fromString)
 
 import Author
 import Database (ObjectId)
-import Tree
 import Util
 
 data Commit = Commit {

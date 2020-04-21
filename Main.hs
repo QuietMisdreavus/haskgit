@@ -1,14 +1,11 @@
 module Main where
 
-import Control.Monad ((<=<))
-import Data.Foldable (traverse_)
 import Data.Maybe
 import Data.Time.LocalTime (getZonedTime)
 import System.Directory
 import System.Environment
 import System.Exit
 import System.FilePath
-import System.IO (getContents)
 
 import Author
 import Blob

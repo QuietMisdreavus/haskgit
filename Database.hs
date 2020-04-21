@@ -3,7 +3,7 @@ module Database where
 import Prelude hiding (length)
 
 import Codec.Compression.Zlib
-import Data.ByteString.Lazy (ByteString, filter, length, hPut)
+import Data.ByteString.Lazy (ByteString, length, hPut)
 import Data.Digest.Pure.SHA
 import Data.String (fromString)
 import System.Directory
