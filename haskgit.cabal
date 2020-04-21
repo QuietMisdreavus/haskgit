@@ -22,6 +22,7 @@ executable haskgit
                        Database.Commit,
                        Database.Tree,
                        Index,
+                       Index.Checksum,
                        Index.Entry,
                        Entry,
                        Lockfile,
@@ -40,4 +41,5 @@ executable haskgit
                        extra,
                        containers,
                        unix,
-                       memory
+                       memory,
+                       binary

@@ -79,7 +79,7 @@ doAdd args = do
     let gitPath = rootPath </> ".git"
     let dbPath = gitPath </> "objects"
     let indexPath = gitPath </> "index"
-    initIndex <- mkIndex indexPath
+    initIndex <- loadIndex =<< mkIndex indexPath
     index <- foldM
         (\i p -> do
             fileData <- readWorkspaceFile rootPath p

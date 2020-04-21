@@ -35,3 +35,11 @@ catchGuardedIOError' action guards =
         (\e -> case (find (\(guard, _) -> guard e) guards) of
             Just (_, catcher) -> catcher e
             Nothing -> IOErr.ioError e)
+
+-- `foldWhileM test init action` checks `init` against `test`, and returns it if `test
+-- init` fails. otherwise, it executes `action`, concatenates it to the end of `init`, and
+-- tries again.
+foldWhileM :: Monad m => (a -> Bool) -> a -> (a -> m a) -> m a
+foldWhileM test init action = if (not $ test init) then return init else do
+    next <- action init
+    foldWhileM test next action

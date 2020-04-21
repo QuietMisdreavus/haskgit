@@ -1,15 +1,18 @@
 module Index.Entry where
 
+import Control.Monad (replicateM)
+import Data.Binary.Get
 import Data.Bits
 import Data.ByteString.Builder
 import Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy as BStr
+import Data.ByteString.Lazy.Char8 (unpack)
 import Data.Time.Clock.POSIX (POSIXTime)
 import Data.Word (Word32)
 import System.Posix.Files
 import System.Posix.Types
 
-import Util.Hash (ObjectId, bStrDigest)
+import Util.Hash (ObjectId, bStrDigest, oidFromBStr)
 
 entryModeValue :: FileStatus -> Word32
 entryModeValue perm =
@@ -82,3 +85,25 @@ renderEntry entry =
             take (fromIntegral $ if padLen == 8 then 0 else padLen) $
             repeat 0
     in buf <> pad
+
+getIndexEntry :: Get IndexEntry
+getIndexEntry = do
+    (ctime:ctimeNS:mtime:mtimeNS:dev:ino:mode:uid:gid:size:[]) <-
+        replicateM 10 getWord32be
+    oid <- getLazyByteString 20
+    flags <- getWord16be
+    path <- getLazyByteStringNul
+    return IndexEntry {
+        entryCTime = fromIntegral ctime,
+        entryCTimeNS = ctimeNS,
+        entryMTime = fromIntegral mtime,
+        entryMTimeNS = mtimeNS,
+        entryDevice = fromIntegral dev,
+        entryInode = fromIntegral ino,
+        entryMode = mode,
+        entryUid = fromIntegral uid,
+        entryGid = fromIntegral gid,
+        entrySize = fromIntegral size,
+        entryId = oidFromBStr oid,
+        entryFlags = fromIntegral flags,
+        entryPath = unpack path}
