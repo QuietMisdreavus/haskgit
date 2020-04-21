@@ -50,9 +50,10 @@ doCommit = do
     entries <- mapM
         (\path -> do
             fileData <- readWorkspaceFile rootPath path
+            fileStat <- statWorkspaceFile rootPath path
             let obj = mkObject $ Blob fileData
             writeObject dbPath obj
-            return $ Entry path $ objectIdBStr obj)
+            return $ Entry path (objectIdBStr obj) fileStat)
         fileList
     let tree = mkObject $ Tree entries
     writeObject dbPath tree

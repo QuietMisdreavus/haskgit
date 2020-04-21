@@ -1,4 +1,8 @@
-module Workspace (listWorkspaceFiles, readWorkspaceFile) where
+module Workspace (
+    listWorkspaceFiles,
+    readWorkspaceFile,
+    statWorkspaceFile
+) where
 
 import Prelude hiding (readFile)
 
@@ -29,3 +33,7 @@ listWorkspaceFiles path =
 -- from the given path, loads the given file.
 readWorkspaceFile :: String -> String -> IO ByteString
 readWorkspaceFile ws f = readFile (ws </> f)
+
+-- from the given path, reads the file permissions for the given file.
+statWorkspaceFile :: String -> String -> IO Permissions
+statWorkspaceFile ws f = getPermissions (ws </> f)
