@@ -1,7 +1,5 @@
 module Workspace (
     listWorkspaceFiles,
-    listWorkspaceFiles', -- TODO make private
-    readEntry,
     readWorkspaceFile,
     statWorkspaceFile
 ) where
@@ -13,10 +11,6 @@ import Data.ByteString.Lazy (ByteString, readFile)
 import Data.List
 import System.Directory
 import System.FilePath
-
-import Blob
-import Database
-import Entry
 
 -- a list of filenames that should be excluded from `listWorkspaceFiles`.
 ignoreFilenames :: [String]
@@ -59,10 +53,3 @@ readWorkspaceFile ws f = readFile (ws </> f)
 -- from the given path, reads the file permissions for the given file.
 statWorkspaceFile :: String -> String -> IO Permissions
 statWorkspaceFile ws f = getPermissions (ws </> f)
-
-readEntry :: String -> String -> IO Entry
-readEntry ws path = do
-    fileData <- readWorkspaceFile ws path
-    fileStat <- statWorkspaceFile ws path
-    let obj = mkObject $ Blob fileData
-    return $ Entry path (objectId obj) fileStat
