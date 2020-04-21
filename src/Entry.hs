@@ -2,7 +2,7 @@ module Entry where
 
 import System.Directory (Permissions, executable)
 
-import Database (ObjectId)
+import Util.Hash (ObjectId)
 
 data Entry = Entry {
     entryName :: String,

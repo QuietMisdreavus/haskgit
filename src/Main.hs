@@ -13,6 +13,7 @@ import Database.Blob
 import Database.Commit
 import Database.Tree
 import Entry
+import Index
 import Refs
 import Util
 import Workspace
@@ -22,6 +23,7 @@ main = getArgs >>= parseCommand
 
 parseCommand :: [String] -> IO ()
 parseCommand ("init":xs) = doInit $ listToMaybe xs
+parseCommand ("add":xs) = doAdd xs
 parseCommand ("commit":_) = doCommit
 parseCommand (comm:_) = commandError comm
 parseCommand [] = commandError ""
@@ -68,3 +70,17 @@ doCommit = do
     let rootMsg = if (isNothing parent) then "(root-commit " else ""
     putStrLn $ "[" ++ rootMsg ++ (objectIdStr commit) ++ "]"
     putStrLn $ head $ lines message
+
+doAdd :: [String] -> IO ()
+doAdd args = do
+    rootPath <- getCurrentDirectory
+    let gitPath = rootPath </> ".git"
+    let dbPath = gitPath </> "objects"
+    let indexPath = gitPath </> "index"
+    let filePath = head args
+    fileData <- readWorkspaceFile rootPath filePath
+    fileStat <- fullStatWorkspaceFile rootPath filePath
+    let obj = mkObject $ Blob fileData
+    writeObject dbPath obj
+    index <- addIndexEntry filePath (objectId obj) fileStat <$> mkIndex indexPath
+    writeIndex index

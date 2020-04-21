@@ -4,15 +4,13 @@ import Prelude hiding (length)
 
 import Codec.Compression.Zlib
 import Data.ByteString.Lazy (ByteString, length, hPut)
-import Data.Digest.Pure.SHA
 import Data.String (fromString)
 import System.Directory
 import System.FilePath
 import System.IO (openTempFile, hClose)
 
 import Util
-
-type ObjectId = Digest SHA1State
+import Util.Hash
 
 data DatabaseObject = DatabaseObject {
     objectContent :: ByteString,
@@ -20,10 +18,10 @@ data DatabaseObject = DatabaseObject {
 }
 
 objectIdStr :: DatabaseObject -> String
-objectIdStr obj = showDigest $ objectId obj
+objectIdStr obj = hexDigest $ objectId obj
 
 objectIdBStr :: DatabaseObject -> ByteString
-objectIdBStr obj = bytestringDigest $ objectId obj
+objectIdBStr obj = bStrDigest $ objectId obj
 
 -- takes a `GitObject` and calculates its object ID.
 mkObject :: (GitObject o) => o -> DatabaseObject

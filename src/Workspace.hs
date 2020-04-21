@@ -1,7 +1,8 @@
 module Workspace (
     listWorkspaceFiles,
     readWorkspaceFile,
-    statWorkspaceFile
+    statWorkspaceFile,
+    fullStatWorkspaceFile
 ) where
 
 import Prelude hiding (readFile)
@@ -11,6 +12,7 @@ import Data.ByteString.Lazy (ByteString, readFile)
 import Data.List
 import System.Directory
 import System.FilePath
+import System.Posix.Files (getFileStatus, FileStatus)
 
 -- a list of filenames that should be excluded from `listWorkspaceFiles`.
 ignoreFilenames :: [String]
@@ -53,3 +55,6 @@ readWorkspaceFile ws f = readFile (ws </> f)
 -- from the given path, reads the file permissions for the given file.
 statWorkspaceFile :: String -> String -> IO Permissions
 statWorkspaceFile ws f = getPermissions (ws </> f)
+
+fullStatWorkspaceFile :: String -> String -> IO FileStatus
+fullStatWorkspaceFile ws f = getFileStatus (ws </> f)

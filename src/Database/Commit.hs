@@ -3,12 +3,11 @@ module Database.Commit where
 import Prelude hiding (unlines)
 
 import Data.ByteString.Lazy.Char8 (unlines)
-import Data.Digest.Pure.SHA (showDigest)
 import Data.String (fromString)
 
-import Database (ObjectId)
 import Database.Author
 import Util
+import Util.Hash
 
 data Commit = Commit {
     commitTree :: ObjectId,
@@ -20,7 +19,7 @@ data Commit = Commit {
 instance GitObject Commit where
     gitType _ = "commit"
     gitData commit =
-        unlines $ [fromString "tree " <> (fromString $ showDigest $ commitTree commit)]
+        unlines $ [fromString "tree " <> (fromString $ hexDigest $ commitTree commit)]
             ++ case (commitParent commit) of
                 Just parent -> [fromString $ "parent " ++ parent]
                 Nothing -> []

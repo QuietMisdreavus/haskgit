@@ -1,6 +1,5 @@
 module Database.Tree where
 
-import Data.Digest.Pure.SHA (bytestringDigest)
 import Data.List (sortOn, foldl')
 import Data.List.Extra (dropSuffix)
 import qualified Data.Map.Strict as Map
@@ -11,6 +10,7 @@ import System.FilePath (splitPath, pathSeparator)
 import Database
 import Entry
 import Util
+import Util.Hash
 
 -- represents a directory of blobs or subtrees
 data Tree = Tree (Map.Map String TreeEntry)
@@ -91,5 +91,5 @@ instance GitObject TreeObject where
             (\name (oid, e) ->
                 let n = dropSuffix [pathSeparator] name;
                     mode = treeEntryMode e
-                in (fromString $ mode ++ " " ++ n ++ "\0") <> (bytestringDigest oid))
+                in (fromString $ mode ++ " " ++ n ++ "\0") <> (bStrDigest oid))
             tree

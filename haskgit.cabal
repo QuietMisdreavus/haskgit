@@ -21,18 +21,23 @@ executable haskgit
                        Database.Blob,
                        Database.Commit,
                        Database.Tree,
+                       Index,
+                       Index.Entry,
                        Entry,
                        Lockfile,
                        Refs,
                        Util,
+                       Util.Hash,
                        Workspace
   default-language:    Haskell2010
   build-depends:       base >= 4.7 && < 5,
                        directory,
                        filepath,
                        bytestring,
-                       SHA,
+                       cryptonite,
                        zlib,
                        time,
                        extra,
-                       containers
+                       containers,
+                       unix,
+                       memory
