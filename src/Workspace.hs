@@ -2,7 +2,8 @@ module Workspace (
     listWorkspaceFiles,
     readWorkspaceFile,
     statWorkspaceFile,
-    fullStatWorkspaceFile
+    fullStatWorkspaceFile,
+    allFilters
 ) where
 
 import Prelude hiding (readFile)

@@ -1,5 +1,6 @@
 module Main where
 
+import Control.Monad (foldM, filterM)
 import Data.Maybe
 import Data.Time.LocalTime (getZonedTime)
 import System.Directory
@@ -77,10 +78,14 @@ doAdd args = do
     let gitPath = rootPath </> ".git"
     let dbPath = gitPath </> "objects"
     let indexPath = gitPath </> "index"
-    let filePath = head args
-    fileData <- readWorkspaceFile rootPath filePath
-    fileStat <- fullStatWorkspaceFile rootPath filePath
-    let obj = mkObject $ Blob fileData
-    writeObject dbPath obj
-    index <- addIndexEntry filePath (objectId obj) fileStat <$> mkIndex indexPath
+    initIndex <- mkIndex indexPath
+    index <- foldM
+        (\i p -> do
+            fileData <- readWorkspaceFile rootPath p
+            fileStat <- fullStatWorkspaceFile rootPath p
+            let obj = mkObject $ Blob fileData
+            writeObject dbPath obj
+            pure $ addIndexEntry p (objectId obj) fileStat i)
+        initIndex
+        =<< filterM doesFileExist args :: IO Index
     writeIndex index
