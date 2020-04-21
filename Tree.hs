@@ -1,7 +1,7 @@
 module Tree where
 
 import Data.Digest.Pure.SHA (bytestringDigest)
-import Data.List (sortOn)
+import Data.List (sortOn, foldl')
 import Data.List.Extra (dropSuffix)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
@@ -29,7 +29,7 @@ emptyTree = Tree Map.empty
 buildTree :: [Entry] -> Tree
 buildTree es =
     let entries = sortOn entryName es
-    in foldl
+    in foldl'
         (\t e ->
             let p = splitPath $ entryName e;
                 path = init p;
