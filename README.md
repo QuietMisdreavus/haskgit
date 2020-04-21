@@ -7,3 +7,9 @@ make no claim of the quality of the code within. i have a few Haskell friends wh
 coached me through this, so this project wouldn't really be possible without them.
 
 [*Building Git*]: https://shop.jcoglan.com/building-git/
+
+notable things that happened while writing this:
+
+* [in my hubris, i posted a patch to the Haskell libraries mailing list][lib-email]
+
+[lib-email]: https://mail.haskell.org/pipermail/libraries/2020-March/030340.html
