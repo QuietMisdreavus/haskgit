@@ -25,7 +25,7 @@ dieOnPermError :: IO a -> IO a
 dieOnPermError action =
     catchGuardedIOError action
         IOErr.isPermissionError
-        (\e -> die $ "fatal: " ++ (displayException e))
+        (\e -> die $ "fatal: " ++ displayException e)
 
 -- `catchGuardedIOError action guard catch` performs `action`, and catches exceptions
 -- thrown that match `guard` by executing `catch`.
@@ -37,20 +37,19 @@ catchGuardedIOError action guard catcher =
 -- multiple exception handlers. the first matching guard will be executed, otherwise an
 -- exception will be rethrown.
 catchGuardedIOError' ::
-    IO a -> [((IOErr.IOError -> Bool), (IOErr.IOError -> IO a))] -> IO a
+    IO a -> [(IOErr.IOError -> Bool, IOErr.IOError -> IO a)] -> IO a
 catchGuardedIOError' action guards =
     catchIOError action
-        (\e -> case (find (\(guard, _) -> guard e) guards) of
+        (\e -> case find (\(guard, _) -> guard e) guards of
             Just (_, catcher) -> catcher e
             Nothing -> IOErr.ioError e)
 
 -- `mkCustomIOError type msg` creates an `IOError` with the given type and error string.
 -- the error will not have a location set.
 mkCustomIOError :: IOErr.IOErrorType -> String -> IOErr.IOError
-mkCustomIOError eType eMsg =
+mkCustomIOError eType =
     IOErr.ioeSetErrorString
         (IOErr.mkIOError eType "" Nothing Nothing)
-        eMsg
 
 -- `throwCustomIOError type msg` creates an `IOError` with the given type and error
 -- string, then immediately throws it with `ioError`.
@@ -67,6 +66,6 @@ ioeGetActualErrorString ioe =
 -- seed` fails. otherwise, it executes `action`, concatenates it to the end of `seed`, and
 -- tries again.
 foldWhileM :: Monad m => (a -> Bool) -> a -> (a -> m a) -> m a
-foldWhileM test seed action = if (not $ test seed) then return seed else do
+foldWhileM test seed action = if not $ test seed then return seed else do
     next <- action seed
     foldWhileM test next action

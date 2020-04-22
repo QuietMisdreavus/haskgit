@@ -24,7 +24,7 @@ readToChecksum (Checksum h hash) sz = do
 verifyChecksum :: Checksum -> IO ()
 verifyChecksum (Checksum h hash) = do
     buf <- hGet h 20
-    if buf /= (bStrDigest $ finishHash hash)
+    if buf /= bStrDigest (finishHash hash)
     then
         let err = userError "Checksum does not match value stored on disk"
         in ioError $ ioeSetHandle err h

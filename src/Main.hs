@@ -20,11 +20,11 @@ main = exitWith =<< catchGuardedIOError'
         let comm = CommandBase curDir env args stdin stdout stderr
         runCommand comm)
     [ (isUserError,
-        (\e -> do
-            hPutStrLn stderr $ "haskgit: " ++ (ioeGetActualErrorString e)
-            exitWith $ ExitFailure 1))
+        \e -> do
+            hPutStrLn stderr $ "haskgit: " ++ ioeGetActualErrorString e
+            exitWith $ ExitFailure 1)
     , (const True,
-        (\e -> do
-            hPutStrLn stderr $ "fatal: " ++ (ioeGetActualErrorString e)
-            exitWith $ ExitFailure 1))
+        \e -> do
+            hPutStrLn stderr $ "fatal: " ++ ioeGetActualErrorString e
+            exitWith $ ExitFailure 1)
     ]

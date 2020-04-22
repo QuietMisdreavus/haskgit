@@ -26,11 +26,11 @@ doCommit env = do
     parent <- readHead gitPath
     let name = Map.findWithDefault "" "GIT_AUTHOR_NAME" $ commEnv env
     let email = Map.findWithDefault "" "GIT_AUTHOR_EMAIL" $ commEnv env
-    author <- (Author name email) <$> getZonedTime
+    author <- Author name email <$> getZonedTime
     message <- hGetContents $ commStdin env
     let commit = mkObject $ Commit treeId parent author message
     writeObject dbPath commit
     updateHead gitPath $ objectId commit
-    let rootMsg = if (isNothing parent) then "(root-commit) " else ""
-    hPutStrLn (commStdout env) $ "[" ++ rootMsg ++ (objectIdStr commit) ++ "]"
+    let rootMsg = if isNothing parent then "(root-commit) " else ""
+    hPutStrLn (commStdout env) $ "[" ++ rootMsg ++ objectIdStr commit ++ "]"
     hPutStrLn (commStdout env) $ head $ lines message

@@ -11,8 +11,8 @@ import Command.Commit
 import Command.Init
 
 runCommand :: CommandBase -> IO ExitCode
-runCommand env = do
-    case (commArgs env) of
+runCommand env =
+    case commArgs env of
         [] -> commandError ""
         (comm:xs) -> handle
             (\code -> return (code :: ExitCode))

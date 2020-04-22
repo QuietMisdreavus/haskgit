@@ -33,7 +33,7 @@ mkTmpPath :: IO FilePath
 mkTmpPath = canonicalizePath "test-repo"
 
 testRepo :: IO Repository
-testRepo = mkRepository <$> (</> ".git") <$> mkTmpPath
+testRepo = mkRepository . (</> ".git") <$> mkTmpPath
 
 writeTestFile :: FilePath -> String -> IO ()
 writeTestFile name contents = do
@@ -47,8 +47,7 @@ makeTestFileExecutable name = do
     setPermissions fullPath
         $ setOwnerExecutable True
         $ setOwnerReadable True
-        $ setOwnerWritable True
-        $ emptyPermissions
+        $ setOwnerWritable True emptyPermissions
 
 makeTestFileUnreadable :: FilePath -> IO ()
 makeTestFileUnreadable name = do
@@ -88,17 +87,17 @@ runTest action = do
     finally action $ removePathForcibly repoPath
 
 assertCommandStatus :: Int -> CommandOutput -> Assertion
-assertCommandStatus expected (CommandOutput { outputCode = code }) =
+assertCommandStatus expected CommandOutput { outputCode = code } =
     if expected == 0
         then assertEqual "" ExitSuccess code
         else assertEqual "" (ExitFailure expected) code
 
 assertCommandStdout :: String -> CommandOutput -> Assertion
-assertCommandStdout expected (CommandOutput { outputStdout = h }) = do
+assertCommandStdout expected CommandOutput { outputStdout = h } = do
     actual <- hGetContents h
     assertEqual "" expected actual
 
 assertCommandStderr :: String -> CommandOutput -> Assertion
-assertCommandStderr expected (CommandOutput { outputStderr = h }) = do
+assertCommandStderr expected CommandOutput { outputStderr = h } = do
     actual <- hGetContents h
     assertEqual "" expected actual

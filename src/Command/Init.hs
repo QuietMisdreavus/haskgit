@@ -18,6 +18,6 @@ doInit env = do
     let fullPath = commAbsolutePath env path
     let gitPath = fullPath </> ".git"
     foldMap
-        (dieOnPermError . (createDirectoryIfMissing True))
-        (map (gitPath </>) ["objects", "refs"])
+        (dieOnPermError . createDirectoryIfMissing True . (gitPath </>))
+        ["objects", "refs"]
     hPutStrLn (commStdout env) $ "Initialized empty haskgit repository in " ++ gitPath

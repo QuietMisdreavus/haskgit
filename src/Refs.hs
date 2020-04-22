@@ -1,7 +1,6 @@
 module Refs (updateHead, readHead) where
 
-import Data.Char (isSpace)
-import Data.List (dropWhileEnd)
+import Data.List.Extra (trimEnd)
 import System.Directory (doesFileExist)
 import System.FilePath ((</>))
 
@@ -23,6 +22,6 @@ readHead :: FilePath -> IO (Maybe String)
 readHead gitPath = do
     let h = headPath gitPath
     hasHead <- doesFileExist h
-    if (hasHead)
-        then Just <$> dropWhileEnd isSpace <$> readFile h
-        else pure $ Nothing
+    if hasHead
+        then Just . trimEnd <$> readFile h
+        else pure Nothing

@@ -24,11 +24,11 @@ ignoreFilenames = [".", "..", ".git", "tags", ".stack-work"]
 
 -- filters the given filename list for files that should not be saved in git.
 filterFilenames :: [FilePath] -> [FilePath]
-filterFilenames dir = filter (\x -> notElem x ignoreFilenames) dir
+filterFilenames = filter (`notElem` ignoreFilenames)
 
 -- filters the given filenames to exclude vim swap files.
 filterSwapFiles :: [FilePath] -> [FilePath]
-filterSwapFiles list = filter (\x -> not $ isSuffixOf ".swp" x) list
+filterSwapFiles = filter (not . isSuffixOf ".swp")
 
 -- combines all the previous filename filters into one call
 allFilters :: [FilePath] -> [FilePath]

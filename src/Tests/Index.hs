@@ -27,7 +27,7 @@ indexTests = TestList
 
 mkOid :: IO ObjectId
 mkOid = do
-    buf <- take 20 <$> randoms <$> getStdGen
+    buf <- take 20 . randoms <$> getStdGen
     return $ oidFromBStr $ BStr.pack buf
 
 mkTmpPath :: IO FilePath

@@ -22,7 +22,7 @@ import Util
 import Util.Hash
 
 -- represents a directory of blobs or subtrees
-data Tree = Tree (Map.Map FilePath TreeEntry)
+newtype Tree = Tree (Map.Map FilePath TreeEntry)
     deriving (Show)
 
 -- records in a tree can be a blob or another tree
@@ -36,13 +36,12 @@ emptyTree = Tree Map.empty
 -- build up a tree from a list of entries. entries with names like "foo/bar" will be
 -- organized into subtrees named "foo/" to ensure proper sorting.
 buildTree :: [IndexEntry] -> Tree
-buildTree es =
+buildTree =
     foldl'
         (\t e ->
             let path = entryParentDirs e
             in addEntryToTree t path e)
         emptyTree
-        es
 
 -- @addEntryToTree tree path entry@ sorts the given entry into the proper subtree,
 -- based on the given path. @path@ should be a list of directory names leading up to the
@@ -61,7 +60,7 @@ addEntryToTree (Tree tree) path entry =
 -- instead of a tree, this function will return 'Nothing'.
 getSubTree :: FilePath -> Tree -> Maybe Tree
 getSubTree k (Tree tree) =
-    case (Map.lookup k tree) of
+    case Map.lookup k tree of
         Just (SubTree t) -> Just t
         _ -> Nothing
 
@@ -71,18 +70,18 @@ traverseTree :: (DatabaseObject -> IO ()) -> Tree -> IO (ObjectId, TreeObject)
 traverseTree f (Tree tree) = do
     tree' <- traverse
         (\e -> case e of
-            SubEntry entry -> pure $ ((entryId entry), SubEntryObject entry)
+            SubEntry entry -> pure (entryId entry, SubEntryObject entry)
             SubTree st -> do
                 (oid, sto) <- traverseTree f st
-                pure $ (oid, SubTreeObject sto))
+                pure (oid, SubTreeObject sto))
         tree
     let treeobj = TreeObject tree'
     let obj = mkObject treeobj
     f obj
-    pure ((objectId obj), treeobj)
+    pure (objectId obj, treeobj)
 
 -- a 'Tree' that has had 'ObjectId's calculated for all its subtrees.
-data TreeObject = TreeObject (Map.Map FilePath (ObjectId, TreeObjectEntry))
+newtype TreeObject = TreeObject (Map.Map FilePath (ObjectId, TreeObjectEntry))
 
 data TreeObjectEntry = SubTreeObject TreeObject | SubEntryObject IndexEntry
 
@@ -98,5 +97,5 @@ instance GitObject TreeObject where
             (\name (oid, e) ->
                 let n = dropTrailingPathSeparator name;
                     mode = treeEntryMode e
-                in (fromString $ mode ++ " " ++ n ++ "\0") <> (bStrDigest oid))
+                in fromString (mode ++ " " ++ n ++ "\0") <> bStrDigest oid)
             tree

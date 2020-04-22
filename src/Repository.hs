@@ -26,25 +26,25 @@ mkRepository :: FilePath -> Repository
 mkRepository gitPath = emptyRepository { repoGitPath = gitPath }
 
 repoDBPath :: Repository -> FilePath
-repoDBPath repo = (repoGitPath repo) </> "objects"
+repoDBPath repo = repoGitPath repo </> "objects"
 
 repoWSPath :: Repository -> FilePath
 repoWSPath repo = takeDirectory $ repoGitPath repo
 
 repoIndexPath :: Repository -> FilePath
-repoIndexPath repo = (repoGitPath repo) </> "index"
+repoIndexPath repo = repoGitPath repo </> "index"
 
 getRepoWriteIndex :: Repository -> IO (Index, Repository)
 getRepoWriteIndex repo =
-    case (repoIndex repo) of
-        Just (i @ (WriteIndex _ _)) -> return (i, repo)
+    case repoIndex repo of
+        Just i @ (WriteIndex _ _) -> return (i, repo)
         _ -> do
             i <- loadIndexToWrite $ repoIndexPath repo
             return (i, repo { repoIndex = Just i })
 
 getRepoReadIndex :: Repository -> IO (Index, Repository)
 getRepoReadIndex repo =
-    case (repoIndex repo) of
+    case repoIndex repo of
         Just i -> return (i, repo)
         Nothing -> do
             i <- loadIndexToRead $ repoIndexPath repo

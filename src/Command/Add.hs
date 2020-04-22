@@ -20,7 +20,7 @@ doAdd :: CommandBase -> IO ()
 doAdd env = do
     (initIndex, repo) <- tryGetIndex env
     (index, needsWrite) <- catchGuardedIOError
-        ((foldM (addFileToIndex repo) (initIndex, False))
+        (foldM (addFileToIndex repo) (initIndex, False)
             =<< expandedPaths env repo)
         isPermissionError
         (handleUnreadableFile env initIndex)
@@ -36,7 +36,7 @@ handleLockedIndex :: CommandBase -> IOError -> IO a
 handleLockedIndex env e = do
     let currentStderr = commStderr env
     hPutStrLn currentStderr $ unlines
-        [ "fatal: " ++ (ioeGetActualErrorString e)
+        [ "fatal: " ++ ioeGetActualErrorString e
         , ""
         , "Another haskgit process seems to be running in this repository."
         , "Please make sure all processes are terminated then try again."
@@ -48,14 +48,14 @@ handleLockedIndex env e = do
 handleMissingFile :: CommandBase -> Index -> IOError -> IO a
 handleMissingFile env index e = do
     let currentStderr = commStderr env
-    hPutStrLn currentStderr $ "fatal: " ++ (ioeGetActualErrorString e)
+    hPutStrLn currentStderr $ "fatal: " ++ ioeGetActualErrorString e
     releaseIndexLock index
     exitWith $ ExitFailure 128
 
 handleUnreadableFile :: CommandBase -> Index -> IOError -> IO a
 handleUnreadableFile env index e = do
     let currentStderr = commStderr env
-    hPutStrLn currentStderr $ "error: " ++ (ioeGetActualErrorString e)
+    hPutStrLn currentStderr $ "error: " ++ ioeGetActualErrorString e
     hPutStrLn currentStderr "fatal: adding files failed"
     releaseIndexLock index
     exitWith $ ExitFailure 128

@@ -54,28 +54,28 @@ writeLockfile :: Lockfile -> String -> IO ()
 writeLockfile (Lockfile filename lockHandle) outStr = do
     holdingLock <- hIsOpen lockHandle
     if not holdingLock
-        then ioError (userError $ "Not holding lock on file: " ++ (lockFileName filename))
+        then ioError (userError $ "Not holding lock on file: " ++ lockFileName filename)
         else hPutStr lockHandle outStr
 
 writeLockfileBStr :: Lockfile -> ByteString -> IO ()
 writeLockfileBStr (Lockfile filename lockHandle) outStr = do
     holdingLock <- hIsOpen lockHandle
     if not holdingLock
-        then ioError (userError $ "Not holding lock on file: " ++ (lockFileName filename))
+        then ioError (userError $ "Not holding lock on file: " ++ lockFileName filename)
         else BStrC.hPutStr lockHandle outStr
 
 writeLockfileBuf :: Lockfile -> ByteBuf.Builder -> IO ()
 writeLockfileBuf (Lockfile filename lockHandle) outBuf = do
     holdingLock <- hIsOpen lockHandle
     if not holdingLock
-        then ioError (userError $ "Not holding lock on file: " ++ (lockFileName filename))
+        then ioError (userError $ "Not holding lock on file: " ++ lockFileName filename)
         else ByteBuf.hPutBuilder lockHandle outBuf
 
 commitLock :: Lockfile -> IO ()
 commitLock (Lockfile filename lockHandle) = do
     holdingLock <- hIsOpen lockHandle
     if not holdingLock
-        then ioError (userError $ "Not holding lock on file: " ++ (lockFileName filename))
+        then ioError (userError $ "Not holding lock on file: " ++ lockFileName filename)
         else do
             hClose lockHandle
             let lockName = lockFileName filename
@@ -85,7 +85,7 @@ rollbackLock :: Lockfile -> IO ()
 rollbackLock (Lockfile filename lockHandle) = do
     holdingLock <- hIsOpen lockHandle
     if not holdingLock
-        then ioError (userError $ "Not holding lock on file: " ++ (lockFileName filename))
+        then ioError (userError $ "Not holding lock on file: " ++ lockFileName filename)
         else do
             hClose lockHandle
             removeFile $ lockFileName filename

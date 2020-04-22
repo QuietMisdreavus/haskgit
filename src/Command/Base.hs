@@ -24,7 +24,7 @@ commAbsolutePath env path =
     normalise $
         if isAbsolute path
             then path
-            else (commDir env) </> path
+            else commDir env </> path
 
 commRepository :: CommandBase -> Repository
-commRepository env = mkRepository $ (commDir env) </> ".git"
+commRepository env = mkRepository $ commDir env </> ".git"

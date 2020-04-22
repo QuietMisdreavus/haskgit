@@ -33,17 +33,17 @@ objectIdBStr obj = bStrDigest $ objectId obj
 mkObject :: (GitObject o) => o -> DatabaseObject
 mkObject obj =
     let objData = gitData obj;
-        content = (fromString $ (gitType obj)
+        content = fromString (gitType obj
                 ++ " "
-                ++ (show $ length $ objData)
+                ++ show (length objData)
                 ++ "\0") <> objData
-    in DatabaseObject content (sha1 $ content)
+    in DatabaseObject content (sha1 content)
 
 -- takes a ".git/objects" directory and a `DatabaseObject` and writes it to the database.
 writeObject :: FilePath -> DatabaseObject -> IO ()
 writeObject path obj = do
     let strId = objectIdStr obj
-    let objPath = path </> (take 2 strId) </> (drop 2 strId)
+    let objPath = path </> take 2 strId </> drop 2 strId
     let objDir = takeDirectory objPath
     objectExists <- doesFileExist objPath
     if objectExists then return () else do

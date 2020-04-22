@@ -15,4 +15,4 @@ data Author = Author {
 renderAuthor :: Author -> String
 renderAuthor author =
     let ts = formatTime defaultTimeLocale "%s %z" (authorTimestamp author)
-    in (authorName author) ++ " <" ++ (authorEmail author) ++ "> " ++ ts
+    in authorName author ++ " <" ++ authorEmail author ++ "> " ++ ts

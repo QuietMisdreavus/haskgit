@@ -21,11 +21,11 @@ data Commit = Commit {
 instance GitObject Commit where
     gitType _ = "commit"
     gitData commit =
-        unlines $ [fromString "tree " <> (fromString $ hexDigest $ commitTree commit)]
-            ++ case (commitParent commit) of
+        unlines $ [fromString ("tree " <> hexDigest (commitTree commit))]
+            ++ case commitParent commit of
                 Just parent -> [fromString $ "parent " ++ parent]
                 Nothing -> []
-            ++ [fromString "author " <> (fromString $ renderAuthor $ commitAuthor commit),
-            fromString "committer " <> (fromString $ renderAuthor $ commitAuthor commit),
+            ++ [fromString ("author " <> renderAuthor (commitAuthor commit)),
+            fromString ("committer " <> renderAuthor (commitAuthor commit)),
             fromString "",
             fromString $ commitMessage commit]

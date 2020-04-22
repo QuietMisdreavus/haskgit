@@ -90,25 +90,24 @@ readIndexInner pathname = do
     indexExists <- doesFileExist pathname
     if not indexExists
         then return emptyIndexInner
-        else do
-            withBinaryFile pathname ReadMode (\h -> do
-                let chkInit = mkChecksum h
-                (chkHeader, count) <- loadIndexHeader chkInit
-                (chkFinal, entries) <- loadEntries chkHeader (fromIntegral count)
-                verifyChecksum chkFinal
-                return $ loadIndexInner entries)
+        else withBinaryFile pathname ReadMode (\h -> do
+            let chkInit = mkChecksum h
+            (chkHeader, count) <- loadIndexHeader chkInit
+            (chkFinal, entries) <- loadEntries chkHeader (fromIntegral count)
+            verifyChecksum chkFinal
+            return $ loadIndexInner entries)
 
 loadIndexHeader :: Checksum -> IO (Checksum, Word32)
 loadIndexHeader chk = do
     (nextChk, buf) <- readToChecksum chk 12
     let (sig, vers, count) = runGet getHeader buf
-    if sig /= (fromString "DIRC")
+    if sig /= fromString "DIRC"
         then IOErr.ioError $ IOErr.userError $
-            "Signature: expected 'DIRC' but found '" ++ (show sig) ++ "'"
+            "Signature: expected 'DIRC' but found '" ++ show sig ++ "'"
         else pure ()
     if vers /= 2
         then IOErr.ioError $ IOErr.userError $
-            "Version: expected '2' but found '" ++ (show vers) ++ "'"
+            "Version: expected '2' but found '" ++ show vers ++ "'"
         else pure ()
     pure (nextChk, count)
 
@@ -116,8 +115,7 @@ getHeader :: Get (BStr.ByteString, Word32, Word32)
 getHeader = (,,) <$> getLazyByteString 4 <*> getWord32be <*> getWord32be
 
 loadIndexInner :: [IndexEntry] -> IndexInner
-loadIndexInner entries =
-    foldr addEntryToInner emptyIndexInner entries
+loadIndexInner = foldr addEntryToInner emptyIndexInner
 
 loadEntries :: Checksum -> Int -> IO (Checksum, [IndexEntry])
 loadEntries chk count =
@@ -132,7 +130,7 @@ loadEntry :: Checksum -> IO (Checksum, IndexEntry)
 loadEntry chk = do
     bufInit <- readToChecksum chk 64
     (nextChk, buf) <- foldWhileM
-        (\(_, b) -> (BStr.last b) /= 0)
+        (\(_, b) -> BStr.last b /= 0)
         bufInit
         (\(lastChk, lastBuf) -> do
             (nextChk, buf) <- readToChecksum lastChk 8
@@ -142,14 +140,14 @@ loadEntry chk = do
 -- "add entry" helpers
 
 addEntryToInner :: IndexEntry -> IndexInner -> IndexInner
-addEntryToInner e (IndexInner { indexIMap = iMap, indexIParents = pMap }) =
+addEntryToInner e IndexInner { indexIMap = iMap, indexIParents = pMap } =
     removeIndexConflicts e $ IndexInner
         { indexIMap = addEntryToMap e iMap
         , indexIParents = addEntryParents e pMap
         }
 
 addEntryToMap :: IndexEntry -> IndexMap -> IndexMap
-addEntryToMap e iMap = Map.insert (entryPath e) e iMap
+addEntryToMap e = Map.insert (entryPath e) e
 
 addEntryParents :: IndexEntry -> IndexParentsMap -> IndexParentsMap
 addEntryParents e pMap = foldr (addParent $ entryPath e) pMap $ entryParentDirs e
@@ -167,7 +165,7 @@ removeIndexConflicts e inner0 =
 
 removeEntryAtPath :: FilePath -> IndexInner -> IndexInner
 removeEntryAtPath pathname i =
-    case (Map.lookup pathname $ indexIMap i) of
+    case Map.lookup pathname $ indexIMap i of
         Nothing -> i
         Just entry ->
             let iMap = Map.delete pathname $ indexIMap i;

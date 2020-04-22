@@ -25,13 +25,13 @@ import Util.Hash (ObjectId, bStrDigest, oidFromBStr)
 
 entryModeValue :: FileStatus -> Word32
 entryModeValue perm =
-    if ((popCount (fileMode perm .&. ownerExecuteMode)) > 0)
+    if popCount (fileMode perm .&. ownerExecuteMode) > 0
         then 0o100755
         else 0o100644
 
 timeToNS :: POSIXTime -> Word32
 timeToNS t =
-    let sec = t - (fromInteger $ truncate t);
+    let sec = t - fromInteger (truncate t);
         nano = sec * 1000000000
     in truncate nano
 
@@ -95,8 +95,8 @@ renderEntry entry =
             fromIntegral . entryUid,
             fromIntegral . entryGid,
             fromIntegral . entrySize] <*> [entry];
-        stats = foldMap (word32BE) statFields;
-        buf = (toLazyByteString $ mconcat [
+        stats = foldMap word32BE statFields;
+        buf = toLazyByteString (mconcat [
             stats,
             lazyByteString $ bStrDigest $ entryId entry,
             word16BE $ fromIntegral $ entryFlags entry,
@@ -104,13 +104,12 @@ renderEntry entry =
         bufLen = BStr.length buf;
         padLen = 8 - (bufLen `mod` 8);
         pad = BStr.pack $
-            take (fromIntegral $ if padLen == 8 then 0 else padLen) $
-            repeat 0
+            replicate (fromIntegral $ if padLen == 8 then 0 else padLen) 0
     in buf <> pad
 
 getIndexEntry :: Get IndexEntry
 getIndexEntry = do
-    (ctime:ctimeNS:mtime:mtimeNS:dev:ino:mode:uid:gid:size:[]) <-
+    [ctime, ctimeNS, mtime, mtimeNS, dev, ino, mode, uid, gid, size] <-
         replicateM 10 getWord32be
     oid <- getLazyByteString 20
     flags <- getWord16be

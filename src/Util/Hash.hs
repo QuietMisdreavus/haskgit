@@ -20,7 +20,7 @@ type IncrHash = Context SHA1
 
 oidFromBStr :: BStr.ByteString -> ObjectId
 oidFromBStr digest =
-    case (digestFromByteString $ BStr.toStrict digest) of
+    case digestFromByteString $ BStr.toStrict digest of
         Just oid -> oid
         Nothing -> error "oidFromBStr called with the wrong length of digest"
 
