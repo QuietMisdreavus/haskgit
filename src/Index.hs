@@ -6,6 +6,7 @@ module Index
     , loadIndexToWrite
     , indexEntries
     , addIndexEntry
+    , releaseIndexLock
     , tryWriteIndex
     ) where
 
@@ -78,6 +79,10 @@ tryWriteIndex shouldWrite (WriteIndex lockfile iMap) =
     if shouldWrite
         then writeIndex (WriteIndex lockfile iMap)
         else rollbackLock lockfile
+
+releaseIndexLock :: Index -> IO ()
+releaseIndexLock (ReadOnlyIndex _ _) = return ()
+releaseIndexLock (WriteIndex lock _) = rollbackLock lock
 
 -- private functions
 

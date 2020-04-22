@@ -8,7 +8,12 @@ import System.Directory
 import System.Environment
 import System.Exit
 import System.FilePath
-import System.IO.Error (catchIOError, ioeGetErrorString)
+import System.IO
+import System.IO.Error
+    ( catchIOError
+    , ioeGetErrorString
+    , isDoesNotExistErrorType
+    , ioeGetErrorType)
 
 import Database
 import Database.Author
@@ -77,6 +82,12 @@ doAdd args = do
     let dbPath = gitPath </> "objects"
     let indexPath = gitPath </> "index"
     initIndex <- loadIndexToWrite indexPath
+    files <- catchGuardedIOError
+        (concatMapM (listFileInWorkspace rootPath) args)
+        (isDoesNotExistErrorType . ioeGetErrorType) (\e -> do
+            hPutStrLn stderr $ "fatal: " ++ (ioeGetActualErrorString e)
+            releaseIndexLock initIndex
+            exitWith $ ExitFailure 128)
     (index, needsWrite) <- foldM
         (\(i, wasUpdated) p -> do
             fileData <- readWorkspaceFile rootPath p
@@ -86,5 +97,5 @@ doAdd args = do
             let (nextIndex, changed) = addIndexEntry p (objectId obj) fileStat i
             return (nextIndex, wasUpdated || changed))
         (initIndex, False)
-        =<< concatMapM (listFileInWorkspace rootPath) args
+        files
     tryWriteIndex needsWrite index

@@ -14,7 +14,10 @@ import Data.ByteString.Lazy (ByteString, readFile)
 import Data.List
 import System.Directory
 import System.FilePath
+import System.IO.Error
 import System.Posix.Files (getFileStatus, FileStatus)
+
+import Util
 
 -- a list of filenames that should be excluded from `listWorkspaceFiles`.
 ignoreFilenames :: [String]
@@ -43,9 +46,13 @@ listWorkspaceFiles' path = do
         (\n -> do
             let fpath = path </> n
             isDir <- doesDirectoryExist fpath
+            isFile <- doesFileExist fpath
             if isDir
                 then listWorkspaceFiles' fpath
-                else pure [fpath]
+                else if isFile
+                    then pure [fpath]
+                    else throwCustomIOError doesNotExistErrorType
+                        $ "pathspec '" ++ fpath ++ "' did not match any files"
         )
         filenames
 
@@ -61,7 +68,7 @@ listFileInWorkspace ws file = do
             concatMapM (listFileInWorkspace ws) files
         else if isFile
             then pure [relpath]
-            else ioError $ userError
+            else throwCustomIOError doesNotExistErrorType
                 $ "pathspec '" ++ relpath ++ "' did not match any files"
 
 -- from the given path, loads the given file.
