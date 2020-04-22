@@ -12,8 +12,8 @@ import System.IO
 import System.IO.Error
     ( catchIOError
     , ioeGetErrorString
-    , isDoesNotExistErrorType
-    , ioeGetErrorType)
+    , isDoesNotExistError
+    , isPermissionError)
 
 import Database
 import Database.Author
@@ -84,18 +84,25 @@ doAdd args = do
     initIndex <- loadIndexToWrite indexPath
     files <- catchGuardedIOError
         (concatMapM (listFileInWorkspace rootPath) args)
-        (isDoesNotExistErrorType . ioeGetErrorType) (\e -> do
+        isDoesNotExistError (\e -> do
             hPutStrLn stderr $ "fatal: " ++ (ioeGetActualErrorString e)
             releaseIndexLock initIndex
             exitWith $ ExitFailure 128)
-    (index, needsWrite) <- foldM
-        (\(i, wasUpdated) p -> do
-            fileData <- readWorkspaceFile rootPath p
-            fileStat <- fullStatWorkspaceFile rootPath p
-            let obj = mkObject $ Blob fileData
-            writeObject dbPath obj
-            let (nextIndex, changed) = addIndexEntry p (objectId obj) fileStat i
-            return (nextIndex, wasUpdated || changed))
-        (initIndex, False)
-        files
+    (index, needsWrite) <- catchGuardedIOError
+        (foldM
+            (\(i, wasUpdated) p -> do
+                fileData <- readWorkspaceFile rootPath p
+                fileStat <- fullStatWorkspaceFile rootPath p
+                let obj = mkObject $ Blob fileData
+                writeObject dbPath obj
+                let (nextIndex, changed) = addIndexEntry p (objectId obj) fileStat i
+                return (nextIndex, wasUpdated || changed))
+            (initIndex, False)
+            files)
+        isPermissionError
+        (\e -> do
+            hPutStrLn stderr $ "error: " ++ (ioeGetActualErrorString e)
+            hPutStrLn stderr "fatal: adding files failed"
+            releaseIndexLock initIndex
+            exitWith $ ExitFailure 128)
     tryWriteIndex needsWrite index

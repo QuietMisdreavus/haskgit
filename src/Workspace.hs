@@ -2,7 +2,6 @@ module Workspace (
     listWorkspaceFiles,
     listFileInWorkspace,
     readWorkspaceFile,
-    statWorkspaceFile,
     fullStatWorkspaceFile,
     allFilters
 ) where
@@ -73,11 +72,16 @@ listFileInWorkspace ws file = do
 
 -- from the given path, loads the given file.
 readWorkspaceFile :: String -> String -> IO ByteString
-readWorkspaceFile ws f = readFile (ws </> f)
+readWorkspaceFile ws f =
+    catchGuardedIOError
+        (readFile (ws </> f))
+        isPermissionError
+        (\e -> ioError $ ioeSetErrorString e $ "open('" ++ f ++ "'): Permission denied")
 
--- from the given path, reads the file permissions for the given file.
-statWorkspaceFile :: String -> String -> IO Permissions
-statWorkspaceFile ws f = getPermissions (ws </> f)
-
+-- from the given path, reads the file status for the given file.
 fullStatWorkspaceFile :: String -> String -> IO FileStatus
-fullStatWorkspaceFile ws f = getFileStatus (ws </> f)
+fullStatWorkspaceFile ws f =
+    catchGuardedIOError
+        (getFileStatus (ws </> f))
+        isPermissionError
+        (\e -> ioError $ ioeSetErrorString e $ "stat('" ++ f ++ "'): Permission denied")
