@@ -22,6 +22,7 @@ import Database.Commit
 import Database.Tree
 import Index
 import Refs
+import Repository
 import Util
 import Workspace
 
@@ -56,11 +57,10 @@ doInit (Just path) = do
 
 doCommit :: IO ()
 doCommit = do
-    rootPath <- getCurrentDirectory
-    let gitPath = rootPath </> ".git"
-    let dbPath = gitPath </> "objects"
-    let indexPath = gitPath </> "index"
-    initIndex <- loadIndexToRead indexPath
+    initRepo <- mkRepository <$> (</> ".git") <$> getCurrentDirectory
+    (initIndex, repo) <- getRepoReadIndex initRepo
+    let gitPath = repoGitPath repo
+    let dbPath = repoDBPath repo
     let tree = buildTree $ indexEntries initIndex
     (treeId, _) <- traverseTree (writeObject dbPath) tree
     parent <- readHead gitPath
@@ -77,12 +77,9 @@ doCommit = do
 
 doAdd :: [String] -> IO ()
 doAdd args = do
-    rootPath <- getCurrentDirectory
-    let gitPath = rootPath </> ".git"
-    let dbPath = gitPath </> "objects"
-    let indexPath = gitPath </> "index"
-    initIndex <- catchGuardedIOError
-        (loadIndexToWrite indexPath)
+    initRepo <- mkRepository <$> (</> ".git") <$> getCurrentDirectory
+    (initIndex, repo) <- catchGuardedIOError
+        (getRepoWriteIndex initRepo)
         isAlreadyExistsError
         (\e -> do
             hPutStrLn stderr $ unlines
@@ -94,17 +91,20 @@ doAdd args = do
                 , "repository earlier; remove the file manually to continue."
                 ]
             exitWith $ ExitFailure 128)
+    let dbPath = repoDBPath repo
+    let ws = repoWSPath repo
     files <- catchGuardedIOError
-        (concatMapM (listFileInWorkspace rootPath) args)
-        isDoesNotExistError (\e -> do
+        (concatMapM (listFileInWorkspace ws) args)
+        isDoesNotExistError
+        (\e -> do
             hPutStrLn stderr $ "fatal: " ++ (ioeGetActualErrorString e)
             releaseIndexLock initIndex
             exitWith $ ExitFailure 128)
     (index, needsWrite) <- catchGuardedIOError
         (foldM
             (\(i, wasUpdated) p -> do
-                fileData <- readWorkspaceFile rootPath p
-                fileStat <- fullStatWorkspaceFile rootPath p
+                fileData <- readWorkspaceFile ws p
+                fileStat <- fullStatWorkspaceFile ws p
                 let obj = mkObject $ Blob fileData
                 writeObject dbPath obj
                 let (nextIndex, changed) = addIndexEntry p (objectId obj) fileStat i
