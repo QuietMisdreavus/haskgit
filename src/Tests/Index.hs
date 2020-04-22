@@ -1,6 +1,7 @@
 module Tests.Index where
 
 import qualified Data.ByteString.Lazy as BStr
+import Data.List (foldl')
 import qualified Data.Map.Strict as Map
 import System.Directory
 import System.Environment
@@ -19,6 +20,8 @@ indexTests :: Test
 indexTests = TestList
     [ TestLabel "adds a single file" addSingleFile
     , TestLabel "replaces a file with a directory" replaceFileWithDir
+    , TestLabel "replaces a directory with a file" replaceDirWithFile
+    , TestLabel "reursively replaces a directory with a file" replaceDirWithFileRecursive
     ]
 
 mkOid :: IO ObjectId
@@ -45,24 +48,59 @@ mkIndex :: IO Index
 mkIndex = do
     h <- fakeHandle
     indexPath <- mkIndexPath
-    return $ WriteIndex (Lockfile indexPath h) Map.empty
+    return $ WriteIndex (Lockfile indexPath h) emptyIndexInner
+
+buildIndex :: [String] -> IO Index
+buildIndex entries = do
+    initIdx <- mkIndex
+    oid <- mkOid
+    stat <- mkStat
+    return $ foldl'
+        (\i p -> fst $ addIndexEntry p oid stat i)
+        initIdx
+        entries
+
+assertIndex :: Index -> [String] -> Assertion
+assertIndex idx entries = assertEqual "" entries $ map entryPath $ indexEntries idx
 
 addSingleFile :: Test
 addSingleFile = TestCase $ do
-    idx <- mkIndex
-    oid <- mkOid
-    stat <- mkStat
-    let (finalIdx, _) = addIndexEntry "alice.txt" oid stat idx
-    assertEqual "" ["alice.txt"] $ map entryPath $ indexEntries finalIdx
+    idx <- buildIndex ["alice.txt"]
+    assertIndex idx ["alice.txt"]
 
 replaceFileWithDir :: Test
 replaceFileWithDir = TestCase $ do
-    idx <- mkIndex
-    oid <- mkOid
-    stat <- mkStat
-    let (firstIdx, _) = addIndexEntry "alice.txt" oid stat idx
-    let (nextIdx, _) = addIndexEntry "bob.txt" oid stat firstIdx
-    let (finalIdx, _) = addIndexEntry "alice.txt/nested.txt" oid stat nextIdx
-    assertEqual ""
-        ["alice.txt/nested.txt", "bob.txt"]
-        $ map entryPath $ indexEntries finalIdx
+    idx <- buildIndex
+        [ "alice.txt"
+        , "bob.txt"
+        , "alice.txt/nested.txt"
+        ]
+    assertIndex idx
+        [ "alice.txt/nested.txt"
+        , "bob.txt"
+        ]
+
+replaceDirWithFile :: Test
+replaceDirWithFile = TestCase $ do
+    idx <- buildIndex
+        [ "alice.txt"
+        , "nested/bob.txt"
+        , "nested"
+        ]
+    assertIndex idx
+        [ "alice.txt"
+        , "nested"
+        ]
+
+replaceDirWithFileRecursive :: Test
+replaceDirWithFileRecursive = TestCase $ do
+    idx <- buildIndex
+        [ "alice.txt"
+        , "nested/bob.txt"
+        , "nested/inner/claire.txt"
+        , "nested"
+        ]
+    assertIndex idx
+        [ "alice.txt"
+        , "nested"
+        ]

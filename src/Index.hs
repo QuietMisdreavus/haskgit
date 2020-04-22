@@ -1,10 +1,21 @@
-module Index where
+module Index
+    ( Index(..)
+    , IndexInner(..)
+    , emptyIndexInner
+    , loadIndexToRead
+    , loadIndexToWrite
+    , indexEntries
+    , addIndexEntry
+    , tryWriteIndex
+    ) where
 
 import Control.Monad (foldM)
 import Data.Binary.Get
 import qualified Data.ByteString.Builder as ByteBuf
 import qualified Data.ByteString.Lazy as BStr
+import Data.List (foldl')
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Data.String (fromString)
 import Data.Word
 import System.Directory
@@ -19,10 +30,23 @@ import Index.Checksum
 import Index.Entry
 
 type IndexMap = Map.Map String IndexEntry
+type IndexParentsMap = Map.Map String (Set.Set String)
 
 data Index
-    = ReadOnlyIndex String IndexMap
-    | WriteIndex Lockfile IndexMap
+    = ReadOnlyIndex String IndexInner
+    | WriteIndex Lockfile IndexInner
+
+data IndexInner = IndexInner
+    { indexIMap :: IndexMap
+    , indexIParents :: IndexParentsMap
+    }
+
+emptyIndexInner :: IndexInner
+emptyIndexInner = IndexInner Map.empty Map.empty
+
+loadIndexInner :: [IndexEntry] -> IndexInner
+loadIndexInner entries =
+    foldr addEntryToInner emptyIndexInner entries
 
 loadIndexToWrite :: String -> IO Index
 loadIndexToWrite pathname = do
@@ -30,46 +54,84 @@ loadIndexToWrite pathname = do
     case lock of
         Left () -> IOErr.ioError $ IOErr.userError $ "Could not lock index at " ++ pathname
         Right l -> do
-            iMap <- readIndexMap pathname
+            iMap <- readIndexInner pathname
             return $ WriteIndex l iMap
 
 loadIndexToRead :: String -> IO Index
 loadIndexToRead pathname = do
-    iMap <- readIndexMap pathname
+    iMap <- readIndexInner pathname
     return $ ReadOnlyIndex pathname iMap
 
-readIndexMap :: String -> IO IndexMap
-readIndexMap pathname = do
+readIndexInner :: String -> IO IndexInner
+readIndexInner pathname = do
     indexExists <- doesFileExist pathname
     if not indexExists
-        then return Map.empty
+        then return emptyIndexInner
         else do
             withBinaryFile pathname ReadMode (\h -> do
                 let chkInit = mkChecksum h
                 (chkHeader, count) <- loadIndexHeader chkInit
                 (chkFinal, entries) <- loadEntries chkHeader (fromIntegral count)
                 verifyChecksum chkFinal
-                return $ Map.fromList $ map (\e -> (entryPath e, e)) entries)
+                return $ loadIndexInner entries)
 
 addIndexEntry :: String -> ObjectId -> FileStatus -> Index -> (Index, Bool)
 -- indicies that were only opened for reading should not use this function
 addIndexEntry _ _ _ (ReadOnlyIndex iPath iMap) = (ReadOnlyIndex iPath iMap, False)
-addIndexEntry path oid stat (WriteIndex l iMap) =
-    let entry = mkIndexEntry path oid stat;
-        updated = case (Map.lookup path iMap) of
-            Nothing -> True
-            Just prevEntry -> prevEntry /= entry
-    in (WriteIndex l $ Map.insert path entry $ removeIndexConflicts entry iMap, updated)
+addIndexEntry path oid stat (WriteIndex l inner) =
+    let entry = mkIndexEntry path oid stat
+    in (WriteIndex l $ addEntryToInner entry inner, True)
 
-removeIndexConflicts :: IndexEntry -> IndexMap -> IndexMap
-removeIndexConflicts e iMap = foldr Map.delete iMap $ entryParentDirs e
+addEntryToInner :: IndexEntry -> IndexInner -> IndexInner
+addEntryToInner e (IndexInner { indexIMap = iMap, indexIParents = pMap }) =
+    removeIndexConflicts e $ IndexInner
+        { indexIMap = addEntryToMap e iMap
+        , indexIParents = addEntryParents e pMap
+        }
+
+removeIndexConflicts :: IndexEntry -> IndexInner -> IndexInner
+removeIndexConflicts e inner0 =
+    let inner1 = foldr removeEntryAtPath inner0 $ entryParentDirs e;
+        pSet = Map.findWithDefault Set.empty (entryPath e) (indexIParents inner1)
+    in foldr removeEntryAtPath inner1 pSet
+
+addEntryToMap :: IndexEntry -> IndexMap -> IndexMap
+addEntryToMap e iMap = Map.insert (entryPath e) e iMap
+
+addParent :: String -> String -> IndexParentsMap -> IndexParentsMap
+addParent v k pMap =
+    let pSet = Map.findWithDefault Set.empty k pMap
+    in Map.insert k (Set.insert v pSet) pMap
+
+addEntryParents :: IndexEntry -> IndexParentsMap -> IndexParentsMap
+addEntryParents e pMap = foldr (addParent $ entryPath e) pMap $ entryParentDirs e
 
 indexEntries :: Index -> [IndexEntry]
 indexEntries i =
     let iMap = case i of
-            (WriteIndex _ m) -> m
-            (ReadOnlyIndex _ m) -> m
+            (WriteIndex _ m) -> indexIMap m
+            (ReadOnlyIndex _ m) -> indexIMap m
     in Map.elems iMap
+
+removeEntryAtPath :: String -> IndexInner -> IndexInner
+removeEntryAtPath pathname i =
+    case (Map.lookup pathname $ indexIMap i) of
+        Nothing -> i
+        Just entry ->
+            let iMap = Map.delete pathname $ indexIMap i;
+                pMap = foldr
+                    (removeEntryParent $ entryPath entry)
+                    (indexIParents i)
+                    (entryParentDirs entry)
+            in IndexInner iMap pMap
+
+removeEntryParent :: String -> String -> IndexParentsMap -> IndexParentsMap
+removeEntryParent path dir pMap =
+    let pSet = Map.findWithDefault Set.empty dir pMap;
+        upSet = Set.delete path pSet
+    in if Set.null upSet
+        then Map.delete dir pMap
+        else Map.insert dir upSet pMap
 
 getHeader :: Get (BStr.ByteString, Word32, Word32)
 getHeader = (,,) <$> getLazyByteString 4 <*> getWord32be <*> getWord32be
@@ -116,7 +178,7 @@ writeIndex (WriteIndex lockfile iMap) = do
             mconcat
                 [ ByteBuf.stringUtf8 "DIRC"
                 , ByteBuf.word32BE 2
-                , ByteBuf.word32BE $ fromIntegral $ Map.size iMap]
+                , ByteBuf.word32BE $ fromIntegral $ Map.size $ indexIMap iMap]
     writeLockfileBStr lockfile header
     let hash = addToHash startHash header
     finalHash <- foldM
@@ -125,7 +187,7 @@ writeIndex (WriteIndex lockfile iMap) = do
             writeLockfileBStr lockfile b
             pure $ addToHash h b)
         hash
-        iMap
+        (indexIMap iMap)
     writeLockfileBStr lockfile $ bStrDigest $ finishHash finalHash
     commitLock lockfile
 
