@@ -1,11 +1,14 @@
 module Command.Base
     ( CommandBase(..)
     , commAbsolutePath
+    , commRepository
     ) where
 
 import qualified Data.Map.Strict as Map
 import System.FilePath
 import System.IO (Handle)
+
+import Repository
 
 data CommandBase = CommandBase
     { commDir :: String
@@ -22,3 +25,6 @@ commAbsolutePath env path =
         if isAbsolute path
             then path
             else (commDir env) </> path
+
+commRepository :: CommandBase -> Repository
+commRepository env = mkRepository $ (commDir env) </> ".git"

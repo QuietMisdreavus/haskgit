@@ -5,7 +5,6 @@ module Command.Commit
 import qualified Data.Map.Strict as Map
 import Data.Maybe
 import Data.Time.LocalTime (getZonedTime)
-import System.FilePath
 import System.IO
 
 import Command.Base
@@ -19,8 +18,7 @@ import Repository
 
 doCommit :: CommandBase -> IO ()
 doCommit env = do
-    let initRepo = mkRepository $ (commDir env) </> ".git"
-    (initIndex, repo) <- getRepoReadIndex initRepo
+    (initIndex, repo) <- getRepoReadIndex $ commRepository env
     let gitPath = repoGitPath repo
     let dbPath = repoDBPath repo
     let tree = buildTree $ indexEntries initIndex
