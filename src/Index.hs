@@ -5,6 +5,7 @@ module Index
     , loadIndexToRead
     , loadIndexToWrite
     , indexEntries
+    , indexHasEntry
     , addIndexEntry
     , releaseIndexLock
     , tryWriteIndex
@@ -68,6 +69,13 @@ indexEntries i =
             (WriteIndex _ m) -> indexIMap m
             (ReadOnlyIndex _ m) -> indexIMap m
     in Map.elems iMap
+
+indexHasEntry :: Index -> FilePath -> Bool
+indexHasEntry i p =
+    let inner = case i of
+                (WriteIndex _ m) -> m
+                (ReadOnlyIndex _ m) -> m
+    in Map.member p (indexIMap inner) || Map.member p (indexIParents inner)
 
 tryWriteIndex :: Bool -> Index -> IO ()
 tryWriteIndex _ (ReadOnlyIndex _ _) =

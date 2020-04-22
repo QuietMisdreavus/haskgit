@@ -6,6 +6,7 @@ module Tests.CommandHelper
     , makeTestFileUnreadable
     , CommandOutput(..)
     , testRunCommand
+    , testCommit
     , runTest
     , assertCommandStatus
     , assertCommandStdout
@@ -61,14 +62,21 @@ data CommandOutput = CommandOutput
     }
 
 testRunCommand :: [String] -> IO CommandOutput
-testRunCommand argv = do
-    (fakeStdin, _) <- mkPipe
+testRunCommand = testRunCommandFull "" Map.empty
+
+testRunCommandFull :: String -> Map.Map String String -> [String] -> IO CommandOutput
+testRunCommandFull input envVars argv = do
+    (fakeStdin, setStdin) <- mkPipe
     (outStdout, fakeStdout) <- mkPipe
     (outStderr, fakeStderr) <- mkPipe
     repoDir <- mkTmpPath
+    if not $ null input
+        then hPutStrLn setStdin input
+        else pure ()
+    hClose setStdin
     let env = CommandBase
             { commDir = repoDir
-            , commEnv = Map.empty
+            , commEnv = envVars
             , commArgs = argv
             , commStdin  = fakeStdin
             , commStdout = fakeStdout
@@ -79,6 +87,14 @@ testRunCommand argv = do
     hClose fakeStdout
     hClose fakeStderr
     return $ CommandOutput code outStdout outStderr
+
+testCommit :: String -> IO CommandOutput
+testCommit msg = do
+    let envVars = Map.fromList
+            [ ("GIT_AUTHOR_NAME", "A. U. Thor")
+            , ("GIT_AUTHOR_EMAIL", "author@example.com")
+            ]
+    testRunCommandFull msg envVars ["commit"]
 
 runTest :: IO a -> IO a
 runTest action = do

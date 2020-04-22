@@ -9,6 +9,7 @@ import Command.Add
 import Command.Base
 import Command.Commit
 import Command.Init
+import Command.Status
 
 runCommand :: CommandBase -> IO ExitCode
 runCommand env =
@@ -22,6 +23,7 @@ runCommand env =
                     "init" -> doInit newEnv
                     "add" -> doAdd newEnv
                     "commit" -> doCommit newEnv
+                    "status" -> doStatus newEnv
                     _ -> commandError comm
                 return ExitSuccess)
 

@@ -20,6 +20,7 @@ common build-info
                        Command.Base,
                        Command.Commit,
                        Command.Init,
+                       Command.Status,
                        Database,
                        Database.Author,
                        Database.Blob,
@@ -59,6 +60,7 @@ test-suite unit
   type:                exitcode-stdio-1.0
   other-modules:       Tests.Command,
                        Tests.Command.Add,
+                       Tests.Command.Status,
                        Tests.CommandHelper,
                        Tests.Index
   build-depends:       HUnit,

@@ -1,6 +1,7 @@
 module Workspace (
     listWorkspaceFiles,
     listFileInWorkspace,
+    listDirInWorkspace,
     readWorkspaceFile,
     fullStatWorkspaceFile,
     allFilters
@@ -8,9 +9,11 @@ module Workspace (
 
 import Prelude hiding (readFile)
 
+import Control.Monad (foldM)
 import Control.Monad.Extra (concatMapM)
 import Data.ByteString.Lazy (ByteString, readFile)
 import Data.List
+import qualified Data.Map.Strict as Map
 import System.Directory
 import System.FilePath
 import System.IO.Error
@@ -69,6 +72,19 @@ listFileInWorkspace ws file = do
             then pure [relpath]
             else throwCustomIOError doesNotExistErrorType
                 $ "pathspec '" ++ relpath ++ "' did not match any files"
+
+listDirInWorkspace :: FilePath -> FilePath -> IO (Map.Map FilePath FileStatus)
+listDirInWorkspace ws dir = do
+    let path = ws </> dir
+    entries <- allFilters <$> getDirectoryContents path
+    foldM
+        (\m e -> do
+            let fullPath = path </> e
+            let relPath = makeRelative ws fullPath
+            stat <- getFileStatus fullPath
+            return $ Map.insert relPath stat m)
+        Map.empty
+        entries
 
 -- from the given path, loads the given file.
 readWorkspaceFile :: FilePath -> FilePath -> IO ByteString
