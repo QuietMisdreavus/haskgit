@@ -1,19 +1,29 @@
 module Command
-    ( parseCommand
+    ( runCommand
     ) where
 
-import Data.Maybe
+import Control.Exception
+import System.Exit
 
 import Command.Add
+import Command.Base
 import Command.Commit
 import Command.Init
 
-parseCommand :: [String] -> IO ()
-parseCommand ("init":xs) = doInit $ listToMaybe xs
-parseCommand ("add":xs) = doAdd xs
-parseCommand ("commit":_) = doCommit
-parseCommand (comm:_) = commandError comm
-parseCommand [] = commandError ""
+runCommand :: CommandBase -> IO ExitCode
+runCommand env = do
+    case (commArgs env) of
+        [] -> commandError ""
+        (comm:xs) -> handle
+            (\code -> return (code :: ExitCode))
+            (do
+                let newEnv = env { commArgs = xs }
+                case comm of
+                    "init" -> doInit newEnv
+                    "add" -> doAdd newEnv
+                    "commit" -> doCommit newEnv
+                    _ -> commandError comm
+                return ExitSuccess)
 
-commandError :: String -> IO ()
+commandError :: String -> IO a
 commandError comm = ioError $ userError $ "'" ++ comm ++ "' is not a haskgit command."

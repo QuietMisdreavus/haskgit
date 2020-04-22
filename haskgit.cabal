@@ -17,6 +17,7 @@ common build-info
   ghc-options:         -W -Wmissing-export-lists
   other-modules:       Command,
                        Command.Add,
+                       Command.Base,
                        Command.Commit,
                        Command.Init,
                        Database,

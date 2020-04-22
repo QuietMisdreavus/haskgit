@@ -4,12 +4,12 @@ module Command.Add
 
 import Control.Monad (foldM)
 import Control.Monad.Extra (concatMapM)
-import System.Directory
 import System.Exit
 import System.FilePath
 import System.IO
 import System.IO.Error
 
+import Command.Base
 import Database
 import Database.Blob
 import Index
@@ -17,14 +17,15 @@ import Repository
 import Util
 import Workspace
 
-doAdd :: [String] -> IO ()
-doAdd args = do
-    initRepo <- mkRepository <$> (</> ".git") <$> getCurrentDirectory
+doAdd :: CommandBase -> IO ()
+doAdd env = do
+    let args = commArgs env
+    let initRepo = mkRepository $ (commDir env) </> ".git"
     (initIndex, repo) <- catchGuardedIOError
         (getRepoWriteIndex initRepo)
         isAlreadyExistsError
         (\e -> do
-            hPutStrLn stderr $ unlines
+            hPutStrLn (commStderr env) $ unlines
                 [ "fatal: " ++ (ioeGetActualErrorString e)
                 , ""
                 , "Another haskgit process seems to be running in this repository."
@@ -39,7 +40,7 @@ doAdd args = do
         (concatMapM (listFileInWorkspace ws) args)
         isDoesNotExistError
         (\e -> do
-            hPutStrLn stderr $ "fatal: " ++ (ioeGetActualErrorString e)
+            hPutStrLn (commStderr env) $ "fatal: " ++ (ioeGetActualErrorString e)
             releaseIndexLock initIndex
             exitWith $ ExitFailure 128)
     (index, needsWrite) <- catchGuardedIOError
@@ -55,8 +56,8 @@ doAdd args = do
             files)
         isPermissionError
         (\e -> do
-            hPutStrLn stderr $ "error: " ++ (ioeGetActualErrorString e)
-            hPutStrLn stderr "fatal: adding files failed"
+            hPutStrLn (commStderr env) $ "error: " ++ (ioeGetActualErrorString e)
+            hPutStrLn (commStderr env) "fatal: adding files failed"
             releaseIndexLock initIndex
             exitWith $ ExitFailure 128)
     tryWriteIndex needsWrite index

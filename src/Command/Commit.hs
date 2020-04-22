@@ -2,12 +2,13 @@ module Command.Commit
     ( doCommit
     ) where
 
+import qualified Data.Map.Strict as Map
 import Data.Maybe
 import Data.Time.LocalTime (getZonedTime)
-import System.Directory
-import System.Environment
 import System.FilePath
+import System.IO
 
+import Command.Base
 import Database
 import Database.Author
 import Database.Commit
@@ -16,22 +17,22 @@ import Index
 import Refs
 import Repository
 
-doCommit :: IO ()
-doCommit = do
-    initRepo <- mkRepository <$> (</> ".git") <$> getCurrentDirectory
+doCommit :: CommandBase -> IO ()
+doCommit env = do
+    let initRepo = mkRepository $ (commDir env) </> ".git"
     (initIndex, repo) <- getRepoReadIndex initRepo
     let gitPath = repoGitPath repo
     let dbPath = repoDBPath repo
     let tree = buildTree $ indexEntries initIndex
     (treeId, _) <- traverseTree (writeObject dbPath) tree
     parent <- readHead gitPath
-    name <- fromMaybe "" <$> lookupEnv "GIT_AUTHOR_NAME"
-    email <- fromMaybe "" <$> lookupEnv "GIT_AUTHOR_EMAIL"
+    let name = Map.findWithDefault "" "GIT_AUTHOR_NAME" $ commEnv env
+    let email = Map.findWithDefault "" "GIT_AUTHOR_EMAIL" $ commEnv env
     author <- (Author name email) <$> getZonedTime
-    message <- getContents
+    message <- hGetContents $ commStdin env
     let commit = mkObject $ Commit treeId parent author message
     writeObject dbPath commit
     updateHead gitPath $ objectId commit
     let rootMsg = if (isNothing parent) then "(root-commit) " else ""
-    putStrLn $ "[" ++ rootMsg ++ (objectIdStr commit) ++ "]"
-    putStrLn $ head $ lines message
+    hPutStrLn (commStdout env) $ "[" ++ rootMsg ++ (objectIdStr commit) ++ "]"
+    hPutStrLn (commStdout env) $ head $ lines message
