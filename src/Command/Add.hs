@@ -60,7 +60,7 @@ handleUnreadableFile env index e = do
     releaseIndexLock index
     exitWith $ ExitFailure 128
 
-expandedPaths :: CommandBase -> Repository -> IO [String]
+expandedPaths :: CommandBase -> Repository -> IO [FilePath]
 expandedPaths env repo = do
     let args = commArgs env
     let ws = repoWSPath repo
@@ -70,7 +70,7 @@ expandedPaths env repo = do
         isDoesNotExistError
         (handleMissingFile env index)
 
-addFileToIndex :: Repository -> (Index, Bool) -> String -> IO (Index, Bool)
+addFileToIndex :: Repository -> (Index, Bool) -> FilePath -> IO (Index, Bool)
 addFileToIndex repo (i, wasUpdated) p = do
     let dbPath = repoDBPath repo
     let ws = repoWSPath repo

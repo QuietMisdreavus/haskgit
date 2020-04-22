@@ -29,19 +29,19 @@ import Repository
 mkPipe :: IO (Handle, Handle)
 mkPipe = createPipe >>= bitraverse fdToHandle fdToHandle
 
-mkTmpPath :: IO String
+mkTmpPath :: IO FilePath
 mkTmpPath = canonicalizePath "test-repo"
 
 testRepo :: IO Repository
 testRepo = mkRepository <$> (</> ".git") <$> mkTmpPath
 
-writeTestFile :: String -> String -> IO ()
+writeTestFile :: FilePath -> String -> IO ()
 writeTestFile name contents = do
     fullPath <- (</> name) <$> mkTmpPath
     createDirectoryIfMissing True $ takeDirectory fullPath
     writeFile fullPath contents
 
-makeTestFileExecutable :: String -> IO ()
+makeTestFileExecutable :: FilePath -> IO ()
 makeTestFileExecutable name = do
     fullPath <- (</> name) <$> mkTmpPath
     setPermissions fullPath
@@ -50,7 +50,7 @@ makeTestFileExecutable name = do
         $ setOwnerWritable True
         $ emptyPermissions
 
-makeTestFileUnreadable :: String -> IO ()
+makeTestFileUnreadable :: FilePath -> IO ()
 makeTestFileUnreadable name = do
     fullPath <- (</> name) <$> mkTmpPath
     setPermissions fullPath emptyPermissions

@@ -12,7 +12,7 @@ import System.FilePath
 import Index
 
 data Repository = Repository
-    { repoGitPath :: String
+    { repoGitPath :: FilePath
     , repoIndex :: Maybe Index
     }
 
@@ -22,16 +22,16 @@ emptyRepository = Repository
     , repoIndex = Nothing
     }
 
-mkRepository :: String -> Repository
+mkRepository :: FilePath -> Repository
 mkRepository gitPath = emptyRepository { repoGitPath = gitPath }
 
-repoDBPath :: Repository -> String
+repoDBPath :: Repository -> FilePath
 repoDBPath repo = (repoGitPath repo) </> "objects"
 
-repoWSPath :: Repository -> String
+repoWSPath :: Repository -> FilePath
 repoWSPath repo = takeDirectory $ repoGitPath repo
 
-repoIndexPath :: Repository -> String
+repoIndexPath :: Repository -> FilePath
 repoIndexPath repo = (repoGitPath repo) </> "index"
 
 getRepoWriteIndex :: Repository -> IO (Index, Repository)

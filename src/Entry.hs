@@ -8,7 +8,7 @@ import System.Directory
 import Util.Hash (ObjectId)
 
 data Entry = Entry {
-    entryName :: String,
+    entryName :: FilePath,
     entryId :: ObjectId,
     entryStat :: Permissions
 } deriving (Show)

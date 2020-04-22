@@ -48,10 +48,10 @@ data IndexEntry = IndexEntry {
     entrySize :: FileOffset,
     entryId :: ObjectId,
     entryFlags :: Word32,
-    entryPath :: String
+    entryPath :: FilePath
 } deriving (Show, Eq)
 
-mkIndexEntry :: String -> ObjectId -> FileStatus -> IndexEntry
+mkIndexEntry :: FilePath -> ObjectId -> FileStatus -> IndexEntry
 mkIndexEntry path oid stat =
     IndexEntry {
         entryCTime = statusChangeTime stat,
@@ -69,7 +69,7 @@ mkIndexEntry path oid stat =
         entryPath = path
     }
 
-entryParentDirs :: IndexEntry -> [String]
+entryParentDirs :: IndexEntry -> [FilePath]
 entryParentDirs e =
     filter (/= ".")
         $ map joinPath
@@ -79,7 +79,7 @@ entryParentDirs e =
         $ dropFileName
         $ entryPath e
 
-entryFileName :: IndexEntry -> String
+entryFileName :: IndexEntry -> FilePath
 entryFileName e = takeFileName $ entryPath e
 
 renderEntry :: IndexEntry -> ByteString

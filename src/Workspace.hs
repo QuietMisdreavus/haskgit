@@ -19,26 +19,26 @@ import System.Posix.Files (getFileStatus, FileStatus)
 import Util
 
 -- a list of filenames that should be excluded from `listWorkspaceFiles`.
-ignoreFilenames :: [String]
+ignoreFilenames :: [FilePath]
 ignoreFilenames = [".", "..", ".git", "tags", ".stack-work"]
 
 -- filters the given filename list for files that should not be saved in git.
-filterFilenames :: [String] -> [String]
+filterFilenames :: [FilePath] -> [FilePath]
 filterFilenames dir = filter (\x -> notElem x ignoreFilenames) dir
 
 -- filters the given filenames to exclude vim swap files.
-filterSwapFiles :: [String] -> [String]
+filterSwapFiles :: [FilePath] -> [FilePath]
 filterSwapFiles list = filter (\x -> not $ isSuffixOf ".swp" x) list
 
 -- combines all the previous filename filters into one call
-allFilters :: [String] -> [String]
+allFilters :: [FilePath] -> [FilePath]
 allFilters list = filterSwapFiles $ filterFilenames list
 
 -- returns the names of the files in the given workspace directory.
-listWorkspaceFiles :: String -> IO [String]
+listWorkspaceFiles :: FilePath -> IO [FilePath]
 listWorkspaceFiles path = listFileInWorkspace path "."
 
-listWorkspaceFiles' :: String -> IO [String]
+listWorkspaceFiles' :: FilePath -> IO [FilePath]
 listWorkspaceFiles' path = do
     filenames <- allFilters <$> getDirectoryContents path
     concatMapM
@@ -55,7 +55,7 @@ listWorkspaceFiles' path = do
         )
         filenames
 
-listFileInWorkspace :: String -> String -> IO [String]
+listFileInWorkspace :: FilePath -> FilePath -> IO [FilePath]
 listFileInWorkspace ws file = do
     let path = if file == "." then ws else ws </> file
     let relpath = makeRelative ws path
@@ -71,7 +71,7 @@ listFileInWorkspace ws file = do
                 $ "pathspec '" ++ relpath ++ "' did not match any files"
 
 -- from the given path, loads the given file.
-readWorkspaceFile :: String -> String -> IO ByteString
+readWorkspaceFile :: FilePath -> FilePath -> IO ByteString
 readWorkspaceFile ws f =
     catchGuardedIOError
         (readFile (ws </> f))
@@ -79,7 +79,7 @@ readWorkspaceFile ws f =
         (\e -> ioError $ ioeSetErrorString e $ "open('" ++ f ++ "'): Permission denied")
 
 -- from the given path, reads the file status for the given file.
-fullStatWorkspaceFile :: String -> String -> IO FileStatus
+fullStatWorkspaceFile :: FilePath -> FilePath -> IO FileStatus
 fullStatWorkspaceFile ws f =
     catchGuardedIOError
         (getFileStatus (ws </> f))

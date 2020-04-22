@@ -40,7 +40,7 @@ mkObject obj =
     in DatabaseObject content (sha1 $ content)
 
 -- takes a ".git/objects" directory and a `DatabaseObject` and writes it to the database.
-writeObject :: String -> DatabaseObject -> IO ()
+writeObject :: FilePath -> DatabaseObject -> IO ()
 writeObject path obj = do
     let strId = objectIdStr obj
     let objPath = path </> (take 2 strId) </> (drop 2 strId)

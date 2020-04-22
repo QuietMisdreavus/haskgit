@@ -30,10 +30,10 @@ mkOid = do
     buf <- take 20 <$> randoms <$> getStdGen
     return $ oidFromBStr $ BStr.pack buf
 
-mkTmpPath :: IO String
+mkTmpPath :: IO FilePath
 mkTmpPath = canonicalizePath "tmp"
 
-mkIndexPath :: IO String
+mkIndexPath :: IO FilePath
 mkIndexPath = (</> "index") <$> mkTmpPath
 
 mkStat :: IO FileStatus
@@ -51,7 +51,7 @@ mkIndex = do
     indexPath <- mkIndexPath
     return $ WriteIndex (Lockfile indexPath h) emptyIndexInner
 
-buildIndex :: [String] -> IO Index
+buildIndex :: [FilePath] -> IO Index
 buildIndex entries = do
     initIdx <- mkIndex
     oid <- mkOid
@@ -61,7 +61,7 @@ buildIndex entries = do
         initIdx
         entries
 
-assertIndex :: Index -> [String] -> Assertion
+assertIndex :: Index -> [FilePath] -> Assertion
 assertIndex idx entries = assertEqual "" entries $ map entryPath $ indexEntries idx
 
 addSingleFile :: Test

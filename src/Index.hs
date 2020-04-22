@@ -29,11 +29,11 @@ import Lockfile
 import Index.Checksum
 import Index.Entry
 
-type IndexMap = Map.Map String IndexEntry
-type IndexParentsMap = Map.Map String (Set.Set String)
+type IndexMap = Map.Map FilePath IndexEntry
+type IndexParentsMap = Map.Map FilePath (Set.Set FilePath)
 
 data Index
-    = ReadOnlyIndex String IndexInner
+    = ReadOnlyIndex FilePath IndexInner
     | WriteIndex Lockfile IndexInner
 
 data IndexInner = IndexInner
@@ -44,18 +44,18 @@ data IndexInner = IndexInner
 emptyIndexInner :: IndexInner
 emptyIndexInner = IndexInner Map.empty Map.empty
 
-loadIndexToWrite :: String -> IO Index
+loadIndexToWrite :: FilePath -> IO Index
 loadIndexToWrite pathname = do
     lock <- mkBinLockfile pathname
     iMap <- readIndexInner pathname
     return $ WriteIndex lock iMap
 
-loadIndexToRead :: String -> IO Index
+loadIndexToRead :: FilePath -> IO Index
 loadIndexToRead pathname = do
     iMap <- readIndexInner pathname
     return $ ReadOnlyIndex pathname iMap
 
-addIndexEntry :: String -> ObjectId -> FileStatus -> Index -> (Index, Bool)
+addIndexEntry :: FilePath -> ObjectId -> FileStatus -> Index -> (Index, Bool)
 -- indicies that were only opened for reading should not use this function
 addIndexEntry _ _ _ (ReadOnlyIndex iPath iMap) = (ReadOnlyIndex iPath iMap, False)
 addIndexEntry path oid stat (WriteIndex l inner) =
@@ -85,7 +85,7 @@ releaseIndexLock (WriteIndex lock _) = rollbackLock lock
 
 -- "load" helpers
 
-readIndexInner :: String -> IO IndexInner
+readIndexInner :: FilePath -> IO IndexInner
 readIndexInner pathname = do
     indexExists <- doesFileExist pathname
     if not indexExists
@@ -154,7 +154,7 @@ addEntryToMap e iMap = Map.insert (entryPath e) e iMap
 addEntryParents :: IndexEntry -> IndexParentsMap -> IndexParentsMap
 addEntryParents e pMap = foldr (addParent $ entryPath e) pMap $ entryParentDirs e
 
-addParent :: String -> String -> IndexParentsMap -> IndexParentsMap
+addParent :: FilePath -> FilePath -> IndexParentsMap -> IndexParentsMap
 addParent v k pMap =
     let pSet = Map.findWithDefault Set.empty k pMap
     in Map.insert k (Set.insert v pSet) pMap
@@ -165,7 +165,7 @@ removeIndexConflicts e inner0 =
         pSet = Map.findWithDefault Set.empty (entryPath e) (indexIParents inner1)
     in foldr removeEntryAtPath inner1 pSet
 
-removeEntryAtPath :: String -> IndexInner -> IndexInner
+removeEntryAtPath :: FilePath -> IndexInner -> IndexInner
 removeEntryAtPath pathname i =
     case (Map.lookup pathname $ indexIMap i) of
         Nothing -> i
@@ -177,7 +177,7 @@ removeEntryAtPath pathname i =
                     (entryParentDirs entry)
             in IndexInner iMap pMap
 
-removeEntryParent :: String -> String -> IndexParentsMap -> IndexParentsMap
+removeEntryParent :: FilePath -> FilePath -> IndexParentsMap -> IndexParentsMap
 removeEntryParent path dir pMap =
     let pSet = Map.findWithDefault Set.empty dir pMap;
         upSet = Set.delete path pSet

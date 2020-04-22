@@ -25,7 +25,7 @@ addCommandTests = TestList
     , TestLabel "fails if the index is locked" indexLockedFailure
     ]
 
-assertIndex :: [(Word32, String)] -> Assertion
+assertIndex :: [(Word32, FilePath)] -> Assertion
 assertIndex expected = do
     (idx, _) <- getRepoReadIndex =<< testRepo
     let actual = map (entryMode &&& entryPath) $ indexEntries idx

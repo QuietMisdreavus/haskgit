@@ -8,10 +8,10 @@ import System.FilePath ((</>))
 import Util.Hash (ObjectId, hexDigest)
 import Lockfile
 
-headPath :: String -> String
+headPath :: FilePath -> FilePath
 headPath gitPath = gitPath </> "HEAD"
 
-updateHead :: String -> ObjectId -> IO ()
+updateHead :: FilePath -> ObjectId -> IO ()
 updateHead gitPath oid = do
     let h = headPath gitPath
     lock <- mkLockfile h
@@ -19,7 +19,7 @@ updateHead gitPath oid = do
     writeLockfile lock "\n"
     commitLock lock
 
-readHead :: String -> IO (Maybe String)
+readHead :: FilePath -> IO (Maybe String)
 readHead gitPath = do
     let h = headPath gitPath
     hasHead <- doesFileExist h

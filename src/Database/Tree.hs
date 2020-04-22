@@ -22,7 +22,7 @@ import Util
 import Util.Hash
 
 -- represents a directory of blobs or subtrees
-data Tree = Tree (Map.Map String TreeEntry)
+data Tree = Tree (Map.Map FilePath TreeEntry)
     deriving (Show)
 
 -- records in a tree can be a blob or another tree
@@ -47,7 +47,7 @@ buildTree es =
 -- @addEntryToTree tree path entry@ sorts the given entry into the proper subtree,
 -- based on the given path. @path@ should be a list of directory names leading up to the
 -- filename.
-addEntryToTree :: Tree -> [String] -> IndexEntry -> Tree
+addEntryToTree :: Tree -> [FilePath] -> IndexEntry -> Tree
 addEntryToTree (Tree tree) [] entry =
     Tree $ Map.insert (entryFileName entry) (SubEntry entry) tree
 addEntryToTree (Tree tree) path entry =
@@ -59,7 +59,7 @@ addEntryToTree (Tree tree) path entry =
 
 -- tries to lookup a subtree with the given name. if an existing record is actually a blob
 -- instead of a tree, this function will return 'Nothing'.
-getSubTree :: String -> Tree -> Maybe Tree
+getSubTree :: FilePath -> Tree -> Maybe Tree
 getSubTree k (Tree tree) =
     case (Map.lookup k tree) of
         Just (SubTree t) -> Just t
@@ -82,7 +82,7 @@ traverseTree f (Tree tree) = do
     pure ((objectId obj), treeobj)
 
 -- a 'Tree' that has had 'ObjectId's calculated for all its subtrees.
-data TreeObject = TreeObject (Map.Map String (ObjectId, TreeObjectEntry))
+data TreeObject = TreeObject (Map.Map FilePath (ObjectId, TreeObjectEntry))
 
 data TreeObjectEntry = SubTreeObject TreeObject | SubEntryObject IndexEntry
 

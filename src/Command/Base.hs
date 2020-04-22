@@ -11,7 +11,7 @@ import System.IO (Handle)
 import Repository
 
 data CommandBase = CommandBase
-    { commDir :: String
+    { commDir :: FilePath
     , commEnv :: Map.Map String String
     , commArgs :: [String]
     , commStdin :: Handle
@@ -19,7 +19,7 @@ data CommandBase = CommandBase
     , commStderr :: Handle
     }
 
-commAbsolutePath :: CommandBase -> String -> String
+commAbsolutePath :: CommandBase -> FilePath -> FilePath
 commAbsolutePath env path =
     normalise $
         if isAbsolute path

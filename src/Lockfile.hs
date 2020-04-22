@@ -19,21 +19,21 @@ import System.IO.Error
 
 import Util
 
-data Lockfile = Lockfile String Handle
+data Lockfile = Lockfile FilePath Handle
 
-lockFileName :: String -> String
+lockFileName :: FilePath -> FilePath
 lockFileName filename = filename <.> "lock"
 
 -- TODO: this locking implementation is racy, but openFile doesn't allow using the EXCL
 -- flag :/
 
-mkLockfile :: String -> IO Lockfile
+mkLockfile :: FilePath -> IO Lockfile
 mkLockfile filename = do
     let lockName = lockFileName filename
     throwIfLockExists lockName
     Lockfile filename <$> openFile lockName ReadWriteMode
 
-mkBinLockfile :: String -> IO Lockfile
+mkBinLockfile :: FilePath -> IO Lockfile
 mkBinLockfile filename = do
     let lockName = lockFileName filename
     throwIfLockExists lockName
@@ -41,7 +41,7 @@ mkBinLockfile filename = do
     hSetBuffering h (BlockBuffering Nothing)
     return $ Lockfile filename h
 
-throwIfLockExists :: String -> IO ()
+throwIfLockExists :: FilePath -> IO ()
 throwIfLockExists lockName = do
     lockExists <- doesFileExist lockName
     if lockExists
