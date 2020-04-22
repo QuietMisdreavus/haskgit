@@ -1,4 +1,10 @@
-module Database where
+module Database
+    ( DatabaseObject(..)
+    , objectIdStr
+    , objectIdBStr
+    , mkObject
+    , writeObject
+    ) where
 
 import Prelude hiding (length)
 

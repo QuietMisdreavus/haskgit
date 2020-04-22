@@ -13,7 +13,6 @@ import Control.Monad (foldM)
 import Data.Binary.Get
 import qualified Data.ByteString.Builder as ByteBuf
 import qualified Data.ByteString.Lazy as BStr
-import Data.List (foldl')
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.String (fromString)

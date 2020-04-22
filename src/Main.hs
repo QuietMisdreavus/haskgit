@@ -1,6 +1,6 @@
-module Main where
+module Main (main) where
 
-import Control.Monad (foldM, filterM)
+import Control.Monad (foldM)
 import Control.Monad.Extra (concatMapM)
 import Data.Maybe
 import Data.Time.LocalTime (getZonedTime)
@@ -14,7 +14,6 @@ import Database.Author
 import Database.Blob
 import Database.Commit
 import Database.Tree
-import Entry
 import Index
 import Refs
 import Util

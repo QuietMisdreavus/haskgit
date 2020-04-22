@@ -1,4 +1,8 @@
-module Util where
+module Util
+    ( GitObject(..)
+    , dieOnPermError
+    , foldWhileM
+    ) where
 
 import Control.Exception
 import Data.ByteString.Lazy hiding (find)

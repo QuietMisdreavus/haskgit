@@ -1,4 +1,9 @@
-module Index.Checksum where
+module Index.Checksum
+    ( Checksum(..)
+    , mkChecksum
+    , readToChecksum
+    , verifyChecksum
+    ) where
 
 import Data.ByteString.Lazy
 import System.IO (Handle)

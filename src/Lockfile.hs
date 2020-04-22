@@ -1,4 +1,13 @@
-module Lockfile where
+module Lockfile
+    ( Lockfile
+    , mkLockfile
+    , mkBinLockfile
+    , writeLockfile
+    , writeLockfileBStr
+    , writeLockfileBuf
+    , commitLock
+    , rollbackLock
+    ) where
 
 import qualified Data.ByteString.Builder as ByteBuf
 import Data.ByteString.Lazy (ByteString)

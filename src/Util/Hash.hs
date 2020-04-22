@@ -1,4 +1,14 @@
-module Util.Hash where
+module Util.Hash
+    ( ObjectId
+    , IncrHash
+    , oidFromBStr
+    , sha1
+    , hexDigest
+    , bStrDigest
+    , startHash
+    , addToHash
+    , finishHash
+    ) where
 
 import Crypto.Hash
 import qualified Data.ByteArray as ByteArr

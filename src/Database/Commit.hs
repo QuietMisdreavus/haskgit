@@ -1,4 +1,6 @@
-module Database.Commit where
+module Database.Commit
+    ( Commit(..)
+    ) where
 
 import Prelude hiding (unlines)
 

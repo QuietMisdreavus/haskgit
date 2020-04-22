@@ -1,16 +1,17 @@
-module Database.Tree where
+module Database.Tree
+    ( buildTree
+    , addEntryToTree
+    , traverseTree
+    , TreeObject(..)
+    ) where
 
-import Data.List (sortOn, foldl')
-import Data.List.Extra (dropSuffix)
+import Data.List (foldl')
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.String (fromString)
 import Numeric (showOct)
-import System.Directory
 import System.FilePath
-    ( splitPath
-    , pathSeparator
-    , takeFileName
+    ( takeFileName
     , addTrailingPathSeparator
     , dropTrailingPathSeparator
     )

@@ -1,4 +1,7 @@
-module Database.Author where
+module Database.Author
+    ( Author(..)
+    , renderAuthor
+    ) where
 
 import Data.Time.Format
 import Data.Time.LocalTime (ZonedTime)

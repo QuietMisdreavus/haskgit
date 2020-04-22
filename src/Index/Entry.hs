@@ -1,4 +1,11 @@
-module Index.Entry where
+module Index.Entry
+    ( IndexEntry(..)
+    , mkIndexEntry
+    , entryParentDirs
+    , entryFileName
+    , renderEntry
+    , getIndexEntry
+    ) where
 
 import Control.Monad (replicateM)
 import Data.Binary.Get
