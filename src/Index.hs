@@ -43,10 +43,6 @@ data IndexInner = IndexInner
 emptyIndexInner :: IndexInner
 emptyIndexInner = IndexInner Map.empty Map.empty
 
-loadIndexInner :: [IndexEntry] -> IndexInner
-loadIndexInner entries =
-    foldr addEntryToInner emptyIndexInner entries
-
 loadIndexToWrite :: String -> IO Index
 loadIndexToWrite pathname = do
     lock <- mkBinLockfile pathname
@@ -61,6 +57,32 @@ loadIndexToRead pathname = do
     iMap <- readIndexInner pathname
     return $ ReadOnlyIndex pathname iMap
 
+addIndexEntry :: String -> ObjectId -> FileStatus -> Index -> (Index, Bool)
+-- indicies that were only opened for reading should not use this function
+addIndexEntry _ _ _ (ReadOnlyIndex iPath iMap) = (ReadOnlyIndex iPath iMap, False)
+addIndexEntry path oid stat (WriteIndex l inner) =
+    let entry = mkIndexEntry path oid stat
+    in (WriteIndex l $ addEntryToInner entry inner, True)
+
+indexEntries :: Index -> [IndexEntry]
+indexEntries i =
+    let iMap = case i of
+            (WriteIndex _ m) -> indexIMap m
+            (ReadOnlyIndex _ m) -> indexIMap m
+    in Map.elems iMap
+
+tryWriteIndex :: Bool -> Index -> IO ()
+tryWriteIndex _ (ReadOnlyIndex _ _) =
+    IOErr.ioError $ IOErr.userError "index was not opened for writing"
+tryWriteIndex shouldWrite (WriteIndex lockfile iMap) =
+    if shouldWrite
+        then writeIndex (WriteIndex lockfile iMap)
+        else rollbackLock lockfile
+
+-- private functions
+
+-- "load" helpers
+
 readIndexInner :: String -> IO IndexInner
 readIndexInner pathname = do
     indexExists <- doesFileExist pathname
@@ -74,12 +96,48 @@ readIndexInner pathname = do
                 verifyChecksum chkFinal
                 return $ loadIndexInner entries)
 
-addIndexEntry :: String -> ObjectId -> FileStatus -> Index -> (Index, Bool)
--- indicies that were only opened for reading should not use this function
-addIndexEntry _ _ _ (ReadOnlyIndex iPath iMap) = (ReadOnlyIndex iPath iMap, False)
-addIndexEntry path oid stat (WriteIndex l inner) =
-    let entry = mkIndexEntry path oid stat
-    in (WriteIndex l $ addEntryToInner entry inner, True)
+loadIndexHeader :: Checksum -> IO (Checksum, Word32)
+loadIndexHeader chk = do
+    (nextChk, buf) <- readToChecksum chk 12
+    let (sig, vers, count) = runGet getHeader buf
+    if sig /= (fromString "DIRC")
+        then IOErr.ioError $ IOErr.userError $
+            "Signature: expected 'DIRC' but found '" ++ (show sig) ++ "'"
+        else pure ()
+    if vers /= 2
+        then IOErr.ioError $ IOErr.userError $
+            "Version: expected '2' but found '" ++ (show vers) ++ "'"
+        else pure ()
+    pure (nextChk, count)
+
+getHeader :: Get (BStr.ByteString, Word32, Word32)
+getHeader = (,,) <$> getLazyByteString 4 <*> getWord32be <*> getWord32be
+
+loadIndexInner :: [IndexEntry] -> IndexInner
+loadIndexInner entries =
+    foldr addEntryToInner emptyIndexInner entries
+
+loadEntries :: Checksum -> Int -> IO (Checksum, [IndexEntry])
+loadEntries chk count =
+    foldM
+        (\(lastChk, entries) _ -> do
+            (nextChk, e) <- loadEntry lastChk
+            return (nextChk, entries <> [e]))
+        (chk, [])
+        [1..count]
+
+loadEntry :: Checksum -> IO (Checksum, IndexEntry)
+loadEntry chk = do
+    bufInit <- readToChecksum chk 64
+    (nextChk, buf) <- foldWhileM
+        (\(_, b) -> (BStr.last b) /= 0)
+        bufInit
+        (\(lastChk, lastBuf) -> do
+            (nextChk, buf) <- readToChecksum lastChk 8
+            return (nextChk, lastBuf <> buf))
+    return (nextChk, runGet getIndexEntry buf)
+
+-- "add entry" helpers
 
 addEntryToInner :: IndexEntry -> IndexInner -> IndexInner
 addEntryToInner e (IndexInner { indexIMap = iMap, indexIParents = pMap }) =
@@ -88,29 +146,22 @@ addEntryToInner e (IndexInner { indexIMap = iMap, indexIParents = pMap }) =
         , indexIParents = addEntryParents e pMap
         }
 
-removeIndexConflicts :: IndexEntry -> IndexInner -> IndexInner
-removeIndexConflicts e inner0 =
-    let inner1 = foldr removeEntryAtPath inner0 $ entryParentDirs e;
-        pSet = Map.findWithDefault Set.empty (entryPath e) (indexIParents inner1)
-    in foldr removeEntryAtPath inner1 pSet
-
 addEntryToMap :: IndexEntry -> IndexMap -> IndexMap
 addEntryToMap e iMap = Map.insert (entryPath e) e iMap
+
+addEntryParents :: IndexEntry -> IndexParentsMap -> IndexParentsMap
+addEntryParents e pMap = foldr (addParent $ entryPath e) pMap $ entryParentDirs e
 
 addParent :: String -> String -> IndexParentsMap -> IndexParentsMap
 addParent v k pMap =
     let pSet = Map.findWithDefault Set.empty k pMap
     in Map.insert k (Set.insert v pSet) pMap
 
-addEntryParents :: IndexEntry -> IndexParentsMap -> IndexParentsMap
-addEntryParents e pMap = foldr (addParent $ entryPath e) pMap $ entryParentDirs e
-
-indexEntries :: Index -> [IndexEntry]
-indexEntries i =
-    let iMap = case i of
-            (WriteIndex _ m) -> indexIMap m
-            (ReadOnlyIndex _ m) -> indexIMap m
-    in Map.elems iMap
+removeIndexConflicts :: IndexEntry -> IndexInner -> IndexInner
+removeIndexConflicts e inner0 =
+    let inner1 = foldr removeEntryAtPath inner0 $ entryParentDirs e;
+        pSet = Map.findWithDefault Set.empty (entryPath e) (indexIParents inner1)
+    in foldr removeEntryAtPath inner1 pSet
 
 removeEntryAtPath :: String -> IndexInner -> IndexInner
 removeEntryAtPath pathname i =
@@ -132,43 +183,6 @@ removeEntryParent path dir pMap =
         then Map.delete dir pMap
         else Map.insert dir upSet pMap
 
-getHeader :: Get (BStr.ByteString, Word32, Word32)
-getHeader = (,,) <$> getLazyByteString 4 <*> getWord32be <*> getWord32be
-
-loadIndexHeader :: Checksum -> IO (Checksum, Word32)
-loadIndexHeader chk = do
-    (nextChk, buf) <- readToChecksum chk 12
-    let (sig, vers, count) = runGet getHeader buf
-    if sig /= (fromString "DIRC")
-        then IOErr.ioError $ IOErr.userError $
-            "Signature: expected 'DIRC' but found '" ++ (show sig) ++ "'"
-        else pure ()
-    if vers /= 2
-        then IOErr.ioError $ IOErr.userError $
-            "Version: expected '2' but found '" ++ (show vers) ++ "'"
-        else pure ()
-    pure (nextChk, count)
-
-loadEntry :: Checksum -> IO (Checksum, IndexEntry)
-loadEntry chk = do
-    bufInit <- readToChecksum chk 64
-    (nextChk, buf) <- foldWhileM
-        (\(_, b) -> (BStr.last b) /= 0)
-        bufInit
-        (\(lastChk, lastBuf) -> do
-            (nextChk, buf) <- readToChecksum lastChk 8
-            return (nextChk, lastBuf <> buf))
-    return (nextChk, runGet getIndexEntry buf)
-
-loadEntries :: Checksum -> Int -> IO (Checksum, [IndexEntry])
-loadEntries chk count =
-    foldM
-        (\(lastChk, entries) _ -> do
-            (nextChk, e) <- loadEntry lastChk
-            return (nextChk, entries <> [e]))
-        (chk, [])
-        [1..count]
-
 writeIndex :: Index -> IO ()
 writeIndex (ReadOnlyIndex _ _) =
     IOErr.ioError $ IOErr.userError "index was not opened for writing"
@@ -189,11 +203,3 @@ writeIndex (WriteIndex lockfile iMap) = do
         (indexIMap iMap)
     writeLockfileBStr lockfile $ bStrDigest $ finishHash finalHash
     commitLock lockfile
-
-tryWriteIndex :: Bool -> Index -> IO ()
-tryWriteIndex _ (ReadOnlyIndex _ _) =
-    IOErr.ioError $ IOErr.userError "index was not opened for writing"
-tryWriteIndex shouldWrite (WriteIndex lockfile iMap) =
-    if shouldWrite
-        then writeIndex (WriteIndex lockfile iMap)
-        else rollbackLock lockfile
