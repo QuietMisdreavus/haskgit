@@ -2,6 +2,7 @@ module Util
     ( GitObject(..)
     , dieOnPermError
     , catchGuardedIOError
+    , catchGuardedIOError'
     , throwCustomIOError
     , ioeGetActualErrorString
     , foldWhileM

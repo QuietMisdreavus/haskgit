@@ -15,7 +15,11 @@ extra-source-files:  README.md
 
 common build-info
   ghc-options:         -W -Wmissing-export-lists
-  other-modules:       Database,
+  other-modules:       Command,
+                       Command.Add,
+                       Command.Commit,
+                       Command.Init,
+                       Database,
                        Database.Author,
                        Database.Blob,
                        Database.Commit,
