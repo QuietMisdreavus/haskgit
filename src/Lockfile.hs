@@ -1,5 +1,5 @@
 module Lockfile
-    ( Lockfile
+    ( Lockfile(..)
     , mkLockfile
     , mkBinLockfile
     , writeLockfile
