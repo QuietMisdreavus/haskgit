@@ -18,6 +18,7 @@ import Util.Hash
 indexTests :: Test
 indexTests = TestList
     [ TestLabel "adds a single file" addSingleFile
+    , TestLabel "replaces a file with a directory" replaceFileWithDir
     ]
 
 mkOid :: IO ObjectId
@@ -52,4 +53,16 @@ addSingleFile = TestCase $ do
     oid <- mkOid
     stat <- mkStat
     let (finalIdx, _) = addIndexEntry "alice.txt" oid stat idx
-    assertEqual "adding a single file" ["alice.txt"] $ map entryPath $ indexEntries finalIdx
+    assertEqual "" ["alice.txt"] $ map entryPath $ indexEntries finalIdx
+
+replaceFileWithDir :: Test
+replaceFileWithDir = TestCase $ do
+    idx <- mkIndex
+    oid <- mkOid
+    stat <- mkStat
+    let (firstIdx, _) = addIndexEntry "alice.txt" oid stat idx
+    let (nextIdx, _) = addIndexEntry "bob.txt" oid stat firstIdx
+    let (finalIdx, _) = addIndexEntry "alice.txt/nested.txt" oid stat nextIdx
+    assertEqual ""
+        ["alice.txt/nested.txt", "bob.txt"]
+        $ map entryPath $ indexEntries finalIdx

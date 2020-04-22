@@ -18,9 +18,11 @@ import Lockfile
 import Index.Checksum
 import Index.Entry
 
+type IndexMap = Map.Map String IndexEntry
+
 data Index
-    = ReadOnlyIndex String (Map.Map String IndexEntry)
-    | WriteIndex Lockfile (Map.Map String IndexEntry)
+    = ReadOnlyIndex String IndexMap
+    | WriteIndex Lockfile IndexMap
 
 loadIndexToWrite :: String -> IO Index
 loadIndexToWrite pathname = do
@@ -36,7 +38,7 @@ loadIndexToRead pathname = do
     iMap <- readIndexMap pathname
     return $ ReadOnlyIndex pathname iMap
 
-readIndexMap :: String -> IO (Map.Map String IndexEntry)
+readIndexMap :: String -> IO IndexMap
 readIndexMap pathname = do
     indexExists <- doesFileExist pathname
     if not indexExists
@@ -57,7 +59,10 @@ addIndexEntry path oid stat (WriteIndex l iMap) =
         updated = case (Map.lookup path iMap) of
             Nothing -> True
             Just prevEntry -> prevEntry /= entry
-    in (WriteIndex l $ Map.insert path entry iMap, updated)
+    in (WriteIndex l $ Map.insert path entry $ removeIndexConflicts entry iMap, updated)
+
+removeIndexConflicts :: IndexEntry -> IndexMap -> IndexMap
+removeIndexConflicts e iMap = foldr Map.delete iMap $ entryParentDirs e
 
 indexEntries :: Index -> [IndexEntry]
 indexEntries i =
