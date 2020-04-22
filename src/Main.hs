@@ -8,6 +8,7 @@ import System.Directory
 import System.Environment
 import System.Exit
 import System.FilePath
+import System.IO.Error (catchIOError, ioeGetErrorString)
 
 import Database
 import Database.Author
@@ -20,7 +21,11 @@ import Util
 import Workspace
 
 main :: IO ()
-main = getArgs >>= parseCommand
+main = printErrorString $ getArgs >>= parseCommand
+
+printErrorString :: IO () -> IO ()
+printErrorString action = catchIOError action
+    (\e -> putStrLn $ "fatal: " ++ (ioeGetErrorString e))
 
 parseCommand :: [String] -> IO ()
 parseCommand ("init":xs) = doInit $ listToMaybe xs
