@@ -52,13 +52,17 @@ listWorkspaceFiles' path = do
 listFileInWorkspace :: String -> String -> IO [String]
 listFileInWorkspace ws file = do
     let path = if file == "." then ws else ws </> file
+    let relpath = makeRelative ws path
     isDir <- doesDirectoryExist path
+    isFile <- doesFileExist path
     if isDir
         then do
             files <- listWorkspaceFiles' path
             concatMapM (listFileInWorkspace ws) files
-        else
-            pure [makeRelative ws file]
+        else if isFile
+            then pure [relpath]
+            else ioError $ userError
+                $ "pathspec '" ++ relpath ++ "' did not match any files"
 
 -- from the given path, loads the given file.
 readWorkspaceFile :: String -> String -> IO ByteString
