@@ -47,11 +47,8 @@ emptyIndexInner = IndexInner Map.empty Map.empty
 loadIndexToWrite :: String -> IO Index
 loadIndexToWrite pathname = do
     lock <- mkBinLockfile pathname
-    case lock of
-        Left () -> IOErr.ioError $ IOErr.userError $ "Could not lock index at " ++ pathname
-        Right l -> do
-            iMap <- readIndexInner pathname
-            return $ WriteIndex l iMap
+    iMap <- readIndexInner pathname
+    return $ WriteIndex lock iMap
 
 loadIndexToRead :: String -> IO Index
 loadIndexToRead pathname = do

@@ -14,14 +14,10 @@ headPath gitPath = gitPath </> "HEAD"
 updateHead :: String -> ObjectId -> IO ()
 updateHead gitPath oid = do
     let h = headPath gitPath
-    lockfile <- mkLockfile h
-    case lockfile of
-        Left _ -> ioError (userError $ "Could not acquire lock on file: " ++ h)
-        Right lock -> do
-            writeLockfile lock (hexDigest oid)
-            writeLockfile lock "\n"
-            commitLock lock
-    -- writeFile (headPath gitPath) (hexDigest oid)
+    lock <- mkLockfile h
+    writeLockfile lock (hexDigest oid)
+    writeLockfile lock "\n"
+    commitLock lock
 
 readHead :: String -> IO (Maybe String)
 readHead gitPath = do

@@ -15,6 +15,9 @@ import qualified Data.ByteString.Lazy.Char8 as BStrC
 import System.Directory
 import System.FilePath
 import System.IO
+import System.IO.Error
+
+import Util
 
 data Lockfile = Lockfile String Handle
 
@@ -24,24 +27,28 @@ lockFileName filename = filename <.> "lock"
 -- TODO: this locking implementation is racy, but openFile doesn't allow using the EXCL
 -- flag :/
 
-mkLockfile :: String -> IO (Either () Lockfile)
+mkLockfile :: String -> IO Lockfile
 mkLockfile filename = do
     let lockName = lockFileName filename
-    lockExists <- doesFileExist lockName
-    if lockExists
-        then return $ Left ()
-        else Right <$> Lockfile filename <$> openFile lockName ReadWriteMode
+    throwIfLockExists lockName
+    Lockfile filename <$> openFile lockName ReadWriteMode
 
-mkBinLockfile :: String -> IO (Either () Lockfile)
+mkBinLockfile :: String -> IO Lockfile
 mkBinLockfile filename = do
     let lockName = lockFileName filename
+    throwIfLockExists lockName
+    h <- openBinaryFile lockName ReadWriteMode
+    hSetBuffering h (BlockBuffering Nothing)
+    return $ Lockfile filename h
+
+throwIfLockExists :: String -> IO ()
+throwIfLockExists lockName = do
     lockExists <- doesFileExist lockName
     if lockExists
-        then return $ Left ()
-        else do
-            h <- openBinaryFile lockName ReadWriteMode
-            hSetBuffering h (BlockBuffering Nothing)
-            return $ Right $ Lockfile filename h
+        then throwCustomIOError
+            alreadyExistsErrorType
+            $ "Unable to create '" ++ lockName ++ "': File exists."
+        else pure ()
 
 writeLockfile :: Lockfile -> String -> IO ()
 writeLockfile (Lockfile filename lockHandle) outStr = do

@@ -11,9 +11,9 @@ import System.FilePath
 import System.IO
 import System.IO.Error
     ( catchIOError
-    , ioeGetErrorString
     , isDoesNotExistError
-    , isPermissionError)
+    , isPermissionError
+    , isAlreadyExistsError)
 
 import Database
 import Database.Author
@@ -30,7 +30,7 @@ main = printErrorString $ getArgs >>= parseCommand
 
 printErrorString :: IO () -> IO ()
 printErrorString action = catchIOError action
-    (\e -> putStrLn $ "fatal: " ++ (ioeGetErrorString e))
+    (\e -> putStrLn $ "fatal: " ++ (ioeGetActualErrorString e))
 
 parseCommand :: [String] -> IO ()
 parseCommand ("init":xs) = doInit $ listToMaybe xs
@@ -81,7 +81,19 @@ doAdd args = do
     let gitPath = rootPath </> ".git"
     let dbPath = gitPath </> "objects"
     let indexPath = gitPath </> "index"
-    initIndex <- loadIndexToWrite indexPath
+    initIndex <- catchGuardedIOError
+        (loadIndexToWrite indexPath)
+        isAlreadyExistsError
+        (\e -> do
+            hPutStrLn stderr $ unlines
+                [ "fatal: " ++ (ioeGetActualErrorString e)
+                , ""
+                , "Another haskgit process seems to be running in this repository."
+                , "Please make sure all processes are terminated then try again."
+                , "If it still fails, a haskgit process may have crashed in this"
+                , "repository earlier; remove the file manually to continue."
+                ]
+            exitWith $ ExitFailure 128)
     files <- catchGuardedIOError
         (concatMapM (listFileInWorkspace rootPath) args)
         isDoesNotExistError (\e -> do
