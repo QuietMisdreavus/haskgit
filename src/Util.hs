@@ -36,10 +36,10 @@ catchGuardedIOError' action guards =
             Just (_, catcher) -> catcher e
             Nothing -> IOErr.ioError e)
 
--- `foldWhileM test init action` checks `init` against `test`, and returns it if `test
--- init` fails. otherwise, it executes `action`, concatenates it to the end of `init`, and
+-- `foldWhileM test seed action` checks `seed` against `test`, and returns it if `test
+-- seed` fails. otherwise, it executes `action`, concatenates it to the end of `seed`, and
 -- tries again.
 foldWhileM :: Monad m => (a -> Bool) -> a -> (a -> m a) -> m a
-foldWhileM test init action = if (not $ test init) then return init else do
-    next <- action init
+foldWhileM test seed action = if (not $ test seed) then return seed else do
+    next <- action seed
     foldWhileM test next action

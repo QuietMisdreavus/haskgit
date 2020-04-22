@@ -18,43 +18,60 @@ import Lockfile
 import Index.Checksum
 import Index.Entry
 
-data Index = Index Lockfile (Map.Map String IndexEntry)
+data Index
+    = ReadOnlyIndex String (Map.Map String IndexEntry)
+    | WriteIndex Lockfile (Map.Map String IndexEntry)
 
-mkIndex :: String -> IO Index
-mkIndex pathname = do
+loadIndexToWrite :: String -> IO Index
+loadIndexToWrite pathname = do
     lock <- mkBinLockfile pathname
     case lock of
         Left () -> IOErr.ioError $ IOErr.userError $ "Could not lock index at " ++ pathname
-        Right l -> pure $ Index l Map.empty
+        Right l -> do
+            iMap <- readIndexMap pathname
+            return $ WriteIndex l iMap
 
-addIndexEntry :: String -> ObjectId -> FileStatus -> Index -> (Index, Bool)
-addIndexEntry path oid stat (Index l iMap) =
-    let entry = mkIndexEntry path oid stat;
-        updated = case (Map.lookup path iMap) of
-            Nothing -> True
-            Just prevEntry -> (entryId prevEntry) /= oid
-    in (Index l $ Map.insert path entry iMap, updated)
+loadIndexToRead :: String -> IO Index
+loadIndexToRead pathname = do
+    iMap <- readIndexMap pathname
+    return $ ReadOnlyIndex pathname iMap
 
-loadIndex :: Index -> IO Index
-loadIndex (Index lock _) = do
-    let (Lockfile filename _) = lock
-    indexExists <- doesFileExist filename
+readIndexMap :: String -> IO (Map.Map String IndexEntry)
+readIndexMap pathname = do
+    indexExists <- doesFileExist pathname
     if not indexExists
-        then return $ Index lock Map.empty
+        then return Map.empty
         else do
-            withBinaryFile filename ReadMode (\h -> do
+            withBinaryFile pathname ReadMode (\h -> do
                 let chkInit = mkChecksum h
                 (chkHeader, count) <- loadIndexHeader chkInit
                 (chkFinal, entries) <- loadEntries chkHeader (fromIntegral count)
                 verifyChecksum chkFinal
-                return $ Index lock $ Map.fromList $ map (\e -> (entryPath e, e)) entries)
+                return $ Map.fromList $ map (\e -> (entryPath e, e)) entries)
+
+addIndexEntry :: String -> ObjectId -> FileStatus -> Index -> (Index, Bool)
+-- indicies that were only opened for reading should not use this function
+addIndexEntry _ _ _ (ReadOnlyIndex iPath iMap) = (ReadOnlyIndex iPath iMap, False)
+addIndexEntry path oid stat (WriteIndex l iMap) =
+    let entry = mkIndexEntry path oid stat;
+        updated = case (Map.lookup path iMap) of
+            Nothing -> True
+            Just prevEntry -> prevEntry /= entry
+    in (WriteIndex l $ Map.insert path entry iMap, updated)
+
+indexEntries :: Index -> [IndexEntry]
+indexEntries i =
+    let iMap = case i of
+            (WriteIndex _ m) -> m
+            (ReadOnlyIndex _ m) -> m
+    in Map.elems iMap
 
 getHeader :: Get (BStr.ByteString, Word32, Word32)
 getHeader = (,,) <$> getLazyByteString 4 <*> getWord32be <*> getWord32be
 
 loadIndexHeader :: Checksum -> IO (Checksum, Word32)
 loadIndexHeader chk = do
-    (sum, buf) <- readToChecksum chk 12
+    (nextChk, buf) <- readToChecksum chk 12
     let (sig, vers, count) = runGet getHeader buf
     if sig /= (fromString "DIRC")
         then IOErr.ioError $ IOErr.userError $
@@ -64,18 +81,18 @@ loadIndexHeader chk = do
         then IOErr.ioError $ IOErr.userError $
             "Version: expected '2' but found '" ++ (show vers) ++ "'"
         else pure ()
-    pure (sum, count)
+    pure (nextChk, count)
 
 loadEntry :: Checksum -> IO (Checksum, IndexEntry)
 loadEntry chk = do
     bufInit <- readToChecksum chk 64
-    (sum, buf) <- foldWhileM
+    (nextChk, buf) <- foldWhileM
         (\(_, b) -> (BStr.last b) /= 0)
         bufInit
         (\(lastChk, lastBuf) -> do
             (nextChk, buf) <- readToChecksum lastChk 8
             return (nextChk, lastBuf <> buf))
-    return (sum, runGet getIndexEntry buf)
+    return (nextChk, runGet getIndexEntry buf)
 
 loadEntries :: Checksum -> Int -> IO (Checksum, [IndexEntry])
 loadEntries chk count =
@@ -87,7 +104,9 @@ loadEntries chk count =
         [1..count]
 
 writeIndex :: Index -> IO ()
-writeIndex (Index lockfile iMap) = do
+writeIndex (ReadOnlyIndex _ _) =
+    IOErr.ioError $ IOErr.userError "index was not opened for writing"
+writeIndex (WriteIndex lockfile iMap) = do
     let header = ByteBuf.toLazyByteString $
             mconcat
                 [ ByteBuf.stringUtf8 "DIRC"
@@ -106,7 +125,9 @@ writeIndex (Index lockfile iMap) = do
     commitLock lockfile
 
 tryWriteIndex :: Bool -> Index -> IO ()
-tryWriteIndex shouldWrite i =
+tryWriteIndex _ (ReadOnlyIndex _ _) =
+    IOErr.ioError $ IOErr.userError "index was not opened for writing"
+tryWriteIndex shouldWrite (WriteIndex lockfile iMap) =
     if shouldWrite
-        then writeIndex i
-        else let (Index lockfile _) = i in rollbackLock lockfile
+        then writeIndex (WriteIndex lockfile iMap)
+        else rollbackLock lockfile

@@ -7,8 +7,10 @@ import Data.ByteString.Builder
 import Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy as BStr
 import Data.ByteString.Lazy.Char8 (unpack)
+import Data.List (inits)
 import Data.Time.Clock.POSIX (POSIXTime)
 import Data.Word (Word32)
+import System.FilePath
 import System.Posix.Files
 import System.Posix.Types
 
@@ -40,7 +42,7 @@ data IndexEntry = IndexEntry {
     entryId :: ObjectId,
     entryFlags :: Word32,
     entryPath :: String
-}
+} deriving (Show, Eq)
 
 mkIndexEntry :: String -> ObjectId -> FileStatus -> IndexEntry
 mkIndexEntry path oid stat =
@@ -59,6 +61,19 @@ mkIndexEntry path oid stat =
         entryFlags = fromIntegral $ min (length path) 0xFFF,
         entryPath = path
     }
+
+entryParentDirs :: IndexEntry -> [String]
+entryParentDirs e =
+    filter (/= ".")
+        $ map joinPath
+        $ tail
+        $ inits
+        $ splitDirectories
+        $ dropFileName
+        $ entryPath e
+
+entryFileName :: IndexEntry -> String
+entryFileName e = takeFileName $ entryPath e
 
 renderEntry :: IndexEntry -> ByteString
 renderEntry entry =

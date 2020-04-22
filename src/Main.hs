@@ -50,16 +50,9 @@ doCommit = do
     rootPath <- getCurrentDirectory
     let gitPath = rootPath </> ".git"
     let dbPath = gitPath </> "objects"
-    fileList <- listWorkspaceFiles rootPath
-    entries <- mapM
-        (\path -> do
-            fileData <- readWorkspaceFile rootPath path
-            fileStat <- statWorkspaceFile rootPath path
-            let obj = mkObject $ Blob fileData
-            writeObject dbPath obj
-            return $ Entry path (objectId obj) fileStat)
-        fileList
-    let tree = buildTree entries
+    let indexPath = gitPath </> "index"
+    initIndex <- loadIndexToRead indexPath
+    let tree = buildTree $ indexEntries initIndex
     (treeId, _) <- traverseTree (writeObject dbPath) tree
     parent <- readHead gitPath
     name <- fromMaybe "" <$> lookupEnv "GIT_AUTHOR_NAME"
@@ -79,7 +72,7 @@ doAdd args = do
     let gitPath = rootPath </> ".git"
     let dbPath = gitPath </> "objects"
     let indexPath = gitPath </> "index"
-    initIndex <- loadIndex =<< mkIndex indexPath
+    initIndex <- loadIndexToWrite indexPath
     (index, needsWrite) <- foldM
         (\(i, wasUpdated) p -> do
             fileData <- readWorkspaceFile rootPath p

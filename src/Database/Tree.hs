@@ -5,10 +5,18 @@ import Data.List.Extra (dropSuffix)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.String (fromString)
-import System.FilePath (splitPath, pathSeparator)
+import Numeric (showOct)
+import System.Directory
+import System.FilePath
+    ( splitPath
+    , pathSeparator
+    , takeFileName
+    , addTrailingPathSeparator
+    , dropTrailingPathSeparator
+    )
 
 import Database
-import Entry
+import Index.Entry
 import Util
 import Util.Hash
 
@@ -17,7 +25,7 @@ data Tree = Tree (Map.Map String TreeEntry)
     deriving (Show)
 
 -- records in a tree can be a blob or another tree
-data TreeEntry = SubTree Tree | SubEntry Entry
+data TreeEntry = SubTree Tree | SubEntry IndexEntry
     deriving (Show)
 
 -- create an empty Tree.
@@ -26,29 +34,27 @@ emptyTree = Tree Map.empty
 
 -- build up a tree from a list of entries. entries with names like "foo/bar" will be
 -- organized into subtrees named "foo/" to ensure proper sorting.
-buildTree :: [Entry] -> Tree
+buildTree :: [IndexEntry] -> Tree
 buildTree es =
-    let entries = sortOn entryName es
-    in foldl'
+    foldl'
         (\t e ->
-            let p = splitPath $ entryName e;
-                path = init p;
-                name = last p
-            in addEntryToTree t path name e)
+            let path = entryParentDirs e
+            in addEntryToTree t path e)
         emptyTree
-        entries
+        es
 
--- @addEntryToTree tree path name entry@ sorts the given entry into the proper subtree,
+-- @addEntryToTree tree path entry@ sorts the given entry into the proper subtree,
 -- based on the given path. @path@ should be a list of directory names leading up to the
 -- filename.
-addEntryToTree :: Tree -> [String] -> String -> Entry -> Tree
-addEntryToTree (Tree tree) [] name entry =
-    Tree $ Map.insert name (SubEntry entry) tree
-addEntryToTree (Tree tree) path name entry =
+addEntryToTree :: Tree -> [String] -> IndexEntry -> Tree
+addEntryToTree (Tree tree) [] entry =
+    Tree $ Map.insert (entryFileName entry) (SubEntry entry) tree
+addEntryToTree (Tree tree) path entry =
     let (k:newPath) = path;
-        st = fromMaybe emptyTree $ getSubTree k (Tree tree);
-        st' = addEntryToTree st newPath name entry
-    in Tree $ Map.insert k (SubTree st') tree
+        key = addTrailingPathSeparator $ takeFileName k;
+        st = fromMaybe emptyTree $ getSubTree key (Tree tree);
+        st' = addEntryToTree st newPath entry
+    in Tree $ Map.insert key (SubTree st') tree
 
 -- tries to lookup a subtree with the given name. if an existing record is actually a blob
 -- instead of a tree, this function will return 'Nothing'.
@@ -77,19 +83,19 @@ traverseTree f (Tree tree) = do
 -- a 'Tree' that has had 'ObjectId's calculated for all its subtrees.
 data TreeObject = TreeObject (Map.Map String (ObjectId, TreeObjectEntry))
 
-data TreeObjectEntry = SubTreeObject TreeObject | SubEntryObject Entry
+data TreeObjectEntry = SubTreeObject TreeObject | SubEntryObject IndexEntry
 
 -- the file mode for a 'TreeObjectEntry', used to render trees to disk.
 treeEntryMode :: TreeObjectEntry -> String
 treeEntryMode (SubTreeObject _) = "40000"
-treeEntryMode (SubEntryObject e) = entryMode e
+treeEntryMode (SubEntryObject e) = showOct (entryMode e) ""
 
 instance GitObject TreeObject where
     gitType _ = "tree"
     gitData (TreeObject tree) =
         Map.foldMapWithKey
             (\name (oid, e) ->
-                let n = dropSuffix [pathSeparator] name;
+                let n = dropTrailingPathSeparator name;
                     mode = treeEntryMode e
                 in (fromString $ mode ++ " " ++ n ++ "\0") <> (bStrDigest oid))
             tree
