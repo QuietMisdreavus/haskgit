@@ -1,21 +1,19 @@
+cabal-version:       2.2
 name:                haskgit
 version:             0.1.0.0
 -- synopsis:
 -- description:
 homepage:            https://github.com/QuietMisdreavus/haskgit#readme
-license:             BSD3
+license:             MPL-2.0
 license-file:        LICENSE
 author:              QuietMisdreavus
 maintainer:          grey@quietmisdreavus.net
 copyright:           2020 QuietMisdreavus
 category:            Web
 build-type:          Simple
-cabal-version:       >=1.10
 extra-source-files:  README.md
 
-executable haskgit
-  hs-source-dirs:      src
-  main-is:             Main.hs
+common build-info
   other-modules:       Database,
                        Database.Author,
                        Database.Blob,
@@ -30,7 +28,6 @@ executable haskgit
                        Util,
                        Util.Hash,
                        Workspace
-  default-language:    Haskell2010
   build-depends:       base >= 4.7 && < 5,
                        directory,
                        filepath,
@@ -43,3 +40,19 @@ executable haskgit
                        unix,
                        memory,
                        binary
+
+executable haskgit
+  import:              build-info
+  hs-source-dirs:      src
+  main-is:             Main.hs
+  default-language:    Haskell2010
+
+test-suite unit
+  import:              build-info
+  type:                exitcode-stdio-1.0
+  other-modules:       Tests.Index
+  build-depends:       HUnit,
+                       random
+  hs-source-dirs:      src
+  main-is:             TestMain.hs
+  default-language:    Haskell2010
