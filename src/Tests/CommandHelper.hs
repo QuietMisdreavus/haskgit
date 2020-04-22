@@ -64,8 +64,8 @@ data CommandOutput = CommandOutput
 testRunCommand :: [String] -> IO CommandOutput
 testRunCommand argv = do
     (fakeStdin, _) <- mkPipe
-    (outputStdout, fakeStdout) <- mkPipe
-    (outputStderr, fakeStderr) <- mkPipe
+    (outStdout, fakeStdout) <- mkPipe
+    (outStderr, fakeStderr) <- mkPipe
     repoDir <- mkTmpPath
     let env = CommandBase
             { commDir = repoDir
@@ -79,12 +79,12 @@ testRunCommand argv = do
     hClose fakeStdin
     hClose fakeStdout
     hClose fakeStderr
-    return $ CommandOutput code outputStdout outputStderr
+    return $ CommandOutput code outStdout outStderr
 
 runTest :: IO a -> IO a
 runTest action = do
     repoPath <- mkTmpPath
-    testRunCommand ["init", repoPath]
+    _ <- testRunCommand ["init", repoPath]
     finally action $ removePathForcibly repoPath
 
 assertCommandStatus :: Int -> CommandOutput -> Assertion
