@@ -57,7 +57,10 @@ executable haskgit
 test-suite unit
   import:              build-info
   type:                exitcode-stdio-1.0
-  other-modules:       Tests.Index
+  other-modules:       Tests.Command,
+                       Tests.Command.Add,
+                       Tests.CommandHelper,
+                       Tests.Index
   build-depends:       HUnit,
                        random
   hs-source-dirs:      src

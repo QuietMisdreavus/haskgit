@@ -1,8 +1,9 @@
-module Tests.Index where
+module Tests.Index
+    ( indexTests
+    ) where
 
 import qualified Data.ByteString.Lazy as BStr
 import Data.List (foldl')
-import qualified Data.Map.Strict as Map
 import System.Directory
 import System.Environment
 import System.FilePath
